@@ -3,6 +3,7 @@ import gevent
 from lib.irc import Irc
 from lib.config import Config
 
+
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
 
@@ -13,16 +14,16 @@ class Modum(object):
         self.conf = Config(self.root_path + config_path)
         self.ircs = {}
         for name in self.conf.servers.keys():
-            irc =  Irc(self.conf.servers[name], name)
-            self.ircs[name] = irc 
-    
+            irc = Irc(self.conf.servers[name], name)
+            self.ircs[name] = irc
+
     """ Main method to start the bot up """
     def run(self):
         for irc in self.ircs.values():
             irc.connect()
         self.bot = gevent.spawn(self._loop)
         self.bot.join()
-    
+
     """ Main event loop """
     def _loop(self):
         while True:

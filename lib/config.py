@@ -4,7 +4,6 @@ import json
 
 class Config(collections.MutableMapping):
 
-
     def __init__(self, config_path):
         #self._settings = {
             #'servers' : {
@@ -22,17 +21,17 @@ class Config(collections.MutableMapping):
         self.config_path = config_path
 
     def load(self, config_path):
-        self._settings = json.load(open(config_path,'r'), 
+        self._settings = json.load(open(config_path, 'r'),
                 encoding="ASCII")
 
     def reload(self):
         self.load(self.config_path)
 
-    def save(self, config_path = None):
+    def save(self, config_path=None):
         if not config_path:
             config_path = self.config_path
-        json.dump(self._settings, open(config_path,'w'), 
-                sort_keys = True, indent = 4)
+        json.dump(self._settings, open(config_path, 'w'),
+                sort_keys=True, indent=4)
 
     def __getitem__(self, key):
         return self._settings.__getitem__(key)
@@ -45,7 +44,7 @@ class Config(collections.MutableMapping):
 
     def __iter__(self):
         return self._settings.__iter__()
-    
+
     def __len__(self):
         return self._settings.__len__()
 

@@ -1,13 +1,15 @@
 import gevent
-from gevent import socket, queue, ssl
+from gevent import socket, queue
+from gevent import ssl as SSL
 
-CRLF  = '\r\n'
+CRLF = '\r\n'
+
 
 class Connection(object):
     """ Manages a line-by-line TCP connection """
 
 #TODO: Work out how timeouts need to work...
-    def __init__(self, host, port, ssl = False, timeout = 10):
+    def __init__(self, host, port, ssl=False, timeout=10):
         self._ibuffer = ''
         self._obuffer = ''
         self.iqueue = queue.Queue()
@@ -23,21 +25,21 @@ class Connection(object):
         s = socket.socket()
         #s.settimeout(self.timeout)
         if (ssl):
-            return ssl.wrap_socket(s)
+            return SSL.wrap_socket(s)
         return s
-    
+
     def connect(self):
         if not self.connected:
             self._sock.connect((self.host, self.port))
-            jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
+            self.jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
             self.connected = True
 
     def disconnect(self):
         if self.connected:
             try:
-                gevent.joinall(jobs)
+                gevent.joinall(self.jobs)
             finally:
-                gevent.killall(jobs)
+                gevent.killall(self.jobs)
             self._sock.close()
             self.connected = False
 

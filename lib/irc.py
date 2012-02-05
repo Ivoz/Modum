@@ -1,10 +1,11 @@
 from connection import Connection
-import replycodes
+#import replycodes
 
 # Constants for IRC special chars
 SPACE = ' '
-NULL  = '\0'
+NULL = '\0'
 DELIM = ':'
+
 
 class Irc(object):
     """ Handles the IRC protocol """
@@ -13,7 +14,7 @@ class Irc(object):
         self.name = name
         self.nick = server['nick']
         self.channels = server['channels']
-        self.conn = Connection(server['host'], server['port'], 
+        self.conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
 
     def connect(self):
@@ -27,18 +28,18 @@ class Irc(object):
 #TODO: Not totally sure about this interface yet.
     def send(self, cmd):
         self.conn.oqueue.put(cmd)
-    
+
     def receive(self):
         return self.conn.iqueue.get()
 
 #TODO: allow for saving new params to the config, e.g nick changes
     #def save(config)
 
-        
+
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, msg = None):
+    def __init__(self, msg=None):
         self.prefix = ''
         self.cmd = ''
         self.params = []
@@ -77,6 +78,7 @@ class Msg(object):
 
     def __str__(self):
         return self.encode()
+
 
 class User(object):
 
