@@ -1,0 +1,21 @@
+{
+    "plugin": {
+        "Google": {
+            "url": "http://google.com?q=%s"
+        }
+    }, 
+    "servers": {
+        "UFTC": {
+            "channels": [
+                "#tom", 
+                "#dick", 
+                "#harry"
+            ], 
+            "host": "irc.oftc.net", 
+            "nick": "bob239", 
+            "port": 6667, 
+            "ssl": false, 
+            "timeout": 10
+        }
+    }
+}

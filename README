@@ -1,0 +1,13 @@
+Modum is a modular, multi-server, gevent-based IRC bot
+
+License to be decided soon.
+
+Copyright 2012, Matt Iversen
+
+Credits:
+
+maxcountryman - https://gist.github.com/676306
+
+zeekay - https://gist.github.com/1740951
+
+gwik - https://github.com/gwik/geventirc
