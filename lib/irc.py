@@ -25,14 +25,14 @@ class Irc(object):
         self.conn.disconnect()
         return self.conn.connected
 
-#TODO: Not totally sure about this interface yet.
+# TODO: Not totally sure about this interface yet.
     def send(self, cmd):
         self.conn.oqueue.put(cmd)
 
     def receive(self):
         return self.conn.iqueue.get()
 
-#TODO: allow for saving new params to the config, e.g nick changes
+# TODO: allow for saving new params to the config, e.g nick changes
     #def save(config)
 
 

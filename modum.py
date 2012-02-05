@@ -8,7 +8,7 @@ class Modum(object):
     """ Modum, the Super Duper IRC bot """
 
     def __init__(self, config_path):
-#TODO: Change '/' to OS dependant directory-separator
+# TODO: Change '/' to OS dependant directory-separator
         self.root_path = os.path.abspath('') + '/'
         self.config_path = config_path
         self.conf = Config(self.root_path + config_path)

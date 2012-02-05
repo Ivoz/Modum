@@ -8,7 +8,7 @@ CRLF = '\r\n'
 class Connection(object):
     """ Manages a line-by-line TCP connection """
 
-#TODO: Work out how timeouts need to work...
+# TODO: Work out how timeouts need to work...
     def __init__(self, host, port, ssl=False, timeout=10):
         self._ibuffer = ''
         self._obuffer = ''
