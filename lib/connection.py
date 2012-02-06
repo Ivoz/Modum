@@ -1,5 +1,6 @@
 import gevent
-from gevent import socket, queue
+from gevent import socket
+from gevent.queue import Queue
 from gevent import ssl as SSL
 
 CRLF = '\r\n'
@@ -12,8 +13,8 @@ class Connection(object):
     def __init__(self, host, port, ssl=False, timeout=10):
         self._ibuffer = ''
         self._obuffer = ''
-        self.iqueue = queue.Queue()
-        self.oqueue = queue.Queue()
+        self.iQ = Queue()
+        self.oQ = Queue()
         self.host = host
         self.port = port
         self.ssl = ssl
@@ -33,13 +34,12 @@ class Connection(object):
             if (err == 0):
                 self.jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
                 self.connected = True
+            else:
+                return err
 
     def disconnect(self):
         if self.connected:
-            try:
-                gevent.joinall(self.jobs)
-            finally:
-                gevent.killall(self.jobs)
+            gevent.killall(self.jobs)
             # Disallow further receives
             self._sock.shutdown(0)
             self._sock.close()
@@ -47,16 +47,16 @@ class Connection(object):
 
     def _send(self):
         while True:
-            line = self.oqueue.get()
-            self._obuffer += line.encode('utf-8', errors='replace') + CRLF
+            line = self.oQ.get()
+            self._obuffer += line.encode('utf_8', errors='replace') + CRLF
             while self._obuffer:
                 sent = self._sock.send(self._obuffer)
                 self._obuffer = self._obuffer[sent:]
 
     def _receive(self):
         while True:
-            data = self._sock.recv(2048)
+            data = self._sock.recv(4096)
             self._ibuffer += data
             while CRLF in self._ibuffer:
                 line, self._ibuffer = self._ibuffer.split(CRLF, 1)
-                self.iqueue.put(line)
+                self.iQ.put(line)

@@ -1,9 +1,8 @@
-import os, sys
+import os
 import gevent
-from gevent import queue
 from lib.irc import Irc
 from lib.config import Config
-
+from lib.stdio import StdIO
 
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
@@ -14,6 +13,8 @@ class Modum(object):
         self.conf = Config(os.path.join(self.root_path, config_path))
         self.ircs = {}
         self.bots = []
+        self.stdio = StdIO()
+        self.stdio.oQ.put("Bootin' this bitch up...")
         for name in self.conf.servers.keys():
             irc = Irc(self.conf.servers[name], name)
             self.ircs[name] = irc
@@ -22,27 +23,14 @@ class Modum(object):
         """Main method to start the bot up"""
         for name in self.ircs:
             self.ircs[name].connect()
-        q = self._loop()
-        while True:
-            sys.stdout.write(q.get()['line'] + '\n')
-            sys.stdout.flush()
-
+            self.ircs[name].addReceiver(self.stdio.oQ)
+            self.ircs[name].addSender(self.stdio.iQ)
 
     def stop(self):
         gevent.joinall(self.bots)
         for irc in self.ircs.values():
             irc.disconnect()
-
-    def _loop(self):
-        """Main event loop"""
-        q = queue.Queue()
-        for n in self.ircs:
-            def _aggregate():
-                while True:
-                    q.put({'irc': n, 'line': self.ircs[n].receive()})
-            self.bots.append(gevent.spawn(_aggregate))
-        return q
-
+        self.stdio.stop()
 
 
 if __name__ == "__main__":

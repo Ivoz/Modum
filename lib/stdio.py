@@ -27,10 +27,8 @@ class StdIO(object):
                 self.iQ.put(line)
 
     def _output(self):
-        try:
-            for line in self.oQ:
-                sys.stdout.write(line)
-        finally:
+        for line in self.oQ:
+            sys.stdout.write(line + '\n')
             sys.stdout.flush()
 
     def stop(self):

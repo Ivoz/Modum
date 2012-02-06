@@ -17,6 +17,10 @@ class Irc(object):
         self._channels = server['channels']
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
+        self._receivers = []
+        self._senders = []
+        self._sending = None
+        self._receiving = None
 
     @property
     def nick(self):
@@ -33,14 +37,39 @@ class Irc(object):
         return self._channels
 
     def connect(self):
+        if self._conn.connected:
+            return True
         self._conn.connect()
         if self._conn.connected:
-            gevent.spawn_later(2, self._register)
+            self._sending = gevent.spawn(self._send)
+            self._receiving = gevent.spawn(self._receive)
+            gevent.spawn_later(1, self._register)
         return self._conn.connected
 
     def disconnect(self):
+        if not self._conn.connected:
+            return False
+        self._sending.kill()
+        self._receiving.kill()
         self._conn.disconnect()
         return self._conn.connected
+
+    def addReceiver(self, receiver):
+        self._receivers.append(receiver)
+
+    def _receive(self):
+        for line in self._conn.iQ.get():
+            for r in self._receivers:
+                r.put(line)
+
+    def addSender(self, sender):
+        self._senders.append(sender)
+
+    def _send(self):
+        while True:
+            for s in self._senders:
+                if not s.empty():
+                    self._conn.oQ.put(s.get())
 
     def _register(self):
         self.nick = self._nick
@@ -48,14 +77,8 @@ class Irc(object):
         self.send(Msg(cmd='JOIN', params=','.join(self._channels)))
 
 # TODO: Not totally sure about this interface yet.
-    def send(self, cmd):
-        self._conn.oqueue.put(cmd.encode())
-        print cmd.encode()
-
-    def receive(self):
-        return self._conn.iqueue.get()
-
-
+    def send(self, msg):
+        self._conn.oQ.put(str(msg))
 
 
 # TODO: allow for saving new params to the config, e.g nick changes
