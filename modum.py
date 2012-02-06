@@ -2,6 +2,7 @@ import os
 from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
+from gevent.queue import Queue
 
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
@@ -19,11 +20,13 @@ class Modum(object):
 
     def run(self):
         """Main method to start the bot up"""
+        dummy = Queue()
         for name in self.ircs:
             self.ircs[name].connect()
             self.ircs[name].add_receiver(self.stdio.oQ)
             self.ircs[name].add_sender(self.stdio.iQ)
-        while True:
+            self.ircs[name].add_receiver(dummy)
+        for line in dummy:
             pass
 
     def stop(self):
