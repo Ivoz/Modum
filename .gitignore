@@ -1,2 +1,5 @@
 *.pyc
 *.swp
+lib/*.pyc
+lib/*.swp
+.ropeproject
