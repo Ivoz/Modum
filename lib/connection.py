@@ -47,7 +47,7 @@ class Connection(object):
     def _send(self):
         while True:
             line = self.oqueue.get()
-            self._obuffer += line.encode('utf-8', 'replace') + CRLF
+            self._obuffer += line.encode('utf-8', errors='replace') + CRLF
             while self._obuffer:
                 sent = self._sock.send(self._obuffer)
                 self._obuffer = self._obuffer[sent:]

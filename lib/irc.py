@@ -32,8 +32,7 @@ class Irc(object):
 # TODO: Not totally sure about this interface yet.
     def send(self, cmd):
         self.o_history.append(cmd)
-        self.conn.oqueue.put(cmd)
-        print cmd
+        self.conn.oqueue.put(cmd.encode())
 
     def receive(self):
         msg = self.conn.iqueue.get()
@@ -57,7 +56,6 @@ class Msg(object):
         self.prefix = prefix
         self.cmd = cmd
         self.params = [params] if (type(params) != list) else params
-        print params, self.params
         if msg != None:
             self.decode(msg)
 
