@@ -13,33 +13,49 @@ class Irc(object):
 
     def __init__(self, server, name):
         self.name = name
-        self.nick = server['nick']
-        self.channels = server['channels']
-        self.conn = Connection(server['host'], server['port'],
+        self._nick = server['nick']
+        self._channels = server['channels']
+        self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
-        self.host = ''
+
+    @property
+    def nick(self):
+        return self._nick
+
+    @nick.setter
+    def nick(self, value):
+        self.send(Msg(cmd='NICK', params=value))
+# TODO: Check that nick is not taken
+        self._nick = value
+
+    @property
+    def channels(self):
+        return self._channels
 
     def connect(self):
-        self.conn.connect()
-        if self.conn.connected:
-            gevent.spawn_later(1, self._register)
-        return self.conn.connected
+        self._conn.connect()
+        if self._conn.connected:
+            gevent.spawn_later(2, self._register)
+        return self._conn.connected
 
     def disconnect(self):
-        self.conn.disconnect()
-        return self.conn.connected
+        self._conn.disconnect()
+        return self._conn.connected
+
+    def _register(self):
+        self.nick = self._nick
+        self.send(Msg(cmd='USER', params=[self.nick, '3', '*', ':' + self.nick]))
+        self.send(Msg(cmd='JOIN', params=','.join(self._channels)))
 
 # TODO: Not totally sure about this interface yet.
     def send(self, cmd):
-        self.conn.oqueue.put(cmd.encode())
+        self._conn.oqueue.put(cmd.encode())
+        print cmd.encode()
 
     def receive(self):
-        return self.conn.iqueue.get()
+        return self._conn.iqueue.get()
 
-    def _register(self):
-        self.send(Msg(cmd='NICK', params=self.nick))
-        self.send(Msg(cmd='USER', params=[self.nick, '3', '*', ':' + self.nick]))
-        self.send(Msg(cmd='JOIN', params=self.channels))
+
 
 
 # TODO: allow for saving new params to the config, e.g nick changes
