@@ -8,24 +8,24 @@ class Modum(object):
     """ Modum, the Super Duper IRC bot """
 
     def __init__(self, config_path):
-# TODO: Change '/' to OS dependant directory-separator
-        self.root_path = os.path.abspath('') + '/'
+        self.root_path = os.path.abspath('')
         self.config_path = config_path
-        self.conf = Config(self.root_path + config_path)
+        self.conf = Config(os.path.join(self.root_path, config_path))
         self.ircs = {}
+        self.bot = gevent.Greenlet(self._loop)
         for name in self.conf.servers.keys():
             irc = Irc(self.conf.servers[name], name)
             self.ircs[name] = irc
 
-    """ Main method to start the bot up """
     def run(self):
+        """Main method to start the bot up"""
         for irc in self.ircs.values():
             irc.connect()
-        self.bot = gevent.spawn(self._loop)
+        self.bot.start()
         self.bot.join()
 
-    """ Main event loop """
     def _loop(self):
+        """Main event loop"""
         while True:
             for irc in self.ircs.values():
                 print irc.receive()

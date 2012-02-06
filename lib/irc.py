@@ -1,4 +1,4 @@
-from connection import Connection
+from lib.connection import Connection
 #import replycodes
 
 # Constants for IRC special chars
@@ -83,8 +83,8 @@ class Msg(object):
 class User(object):
 
     def __init__(self, userstring):
-        self.prefix
-        self.name
-        self.host
-        self.server
-        self.real
+        self.prefix = ''
+        self.name = ''
+        self.host = ''
+        self.server = ''
+        self.real = ''

@@ -18,13 +18,14 @@ class Connection(object):
         self.port = port
         self.ssl = ssl
         self.timeout = timeout
-        self._sock = self._create_socket(ssl)
+        self._sock = self._create_socket()
         self.connected = False
+        self.jobs = []
 
-    def _create_socket(self, ssl):
+    def _create_socket(self):
         s = socket.socket()
         #s.settimeout(self.timeout)
-        if (ssl):
+        if (self.ssl):
             return SSL.wrap_socket(s)
         return s
 

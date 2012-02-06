@@ -5,18 +5,18 @@ import json
 class Config(collections.MutableMapping):
 
     def __init__(self, config_path):
-        #self._settings = {
-            #'servers' : {
-                #'Default' : {
-                    #'host'    : 'irc.oftc.net',
-                    #'port'    : 6667,
-                    #'ssl'     : False,
-                    #'timeout' : 10,
-                    #'nick'    : 'Modum',
-                    #'channels' : ['#bots']
-                    #}
-                #}
-            #}
+        self._settings = {
+            'servers' : {
+                'Default' : {
+                    'host'    : 'irc.oftc.net',
+                    'port'    : 6667,
+                    'ssl'     : False,
+                    'timeout' : 10,
+                    'nick'    : 'Modum',
+                    'channels' : ['#bots']
+                    }
+                }
+            }
         self.load(config_path)
         self.config_path = config_path
 
@@ -37,7 +37,7 @@ class Config(collections.MutableMapping):
         return self._settings.__getitem__(key)
 
     def __setitem__(self, key, value):
-        self._settings.__setitem(key, value)
+        self._settings.__setitem__(key, value)
 
     def __delitem__(self, key):
         self._settings.__delitem__(key)
