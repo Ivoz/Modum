@@ -20,19 +20,12 @@ class Modum(object):
 
     def run(self):
         """Main method to start the bot up"""
-        i = {}
         for name in self.ircs:
             self.ircs[name].connect()
-            i[name] = 0
         q = self._loop()
         while True:
-            line = q.get()
-            i[line['irc']] += 1
-            sys.stdout.write(line['line'] + '\n')
+            sys.stdout.write(q.get()['line'] + '\n')
             sys.stdout.flush()
-            for name in self.ircs:
-                if (i[name] == 4):
-                    self.ircs[name].register()
 
 
     def stop(self):

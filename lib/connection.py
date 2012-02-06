@@ -25,15 +25,14 @@ class Connection(object):
     def _create_socket(self):
         s = socket.socket()
         #s.settimeout(self.timeout)
-        if (self.ssl):
-            return SSL.wrap_socket(s)
-        return s
+        return SSL.wrap_socket(s) if self.ssl else s
 
     def connect(self):
         if not self.connected:
-            self._sock.connect((self.host, self.port))
-            self.jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
-            self.connected = True
+            err = self._sock.connect_ex((self.host, self.port))
+            if (err == 0):
+                self.jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
+                self.connected = True
 
     def disconnect(self):
         if self.connected:
@@ -41,6 +40,8 @@ class Connection(object):
                 gevent.joinall(self.jobs)
             finally:
                 gevent.killall(self.jobs)
+            # Disallow further receives
+            self._sock.shutdown(0)
             self._sock.close()
             self.connected = False
 

@@ -1,5 +1,5 @@
+import gevent
 from lib.connection import Connection
-from collections import deque
 #import replycodes
 
 # Constants for IRC special chars
@@ -18,11 +18,11 @@ class Irc(object):
         self.conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
         self.host = ''
-        self.i_history = deque(maxlen=100)
-        self.o_history = deque(maxlen=100)
 
     def connect(self):
         self.conn.connect()
+        if self.conn.connected:
+            gevent.spawn_later(1, self._register)
         return self.conn.connected
 
     def disconnect(self):
@@ -31,17 +31,14 @@ class Irc(object):
 
 # TODO: Not totally sure about this interface yet.
     def send(self, cmd):
-        self.o_history.append(cmd)
         self.conn.oqueue.put(cmd.encode())
 
     def receive(self):
-        msg = self.conn.iqueue.get()
-        self.i_history.append(msg)
-        return msg
+        return self.conn.iqueue.get()
 
-    def register(self):
+    def _register(self):
         self.send(Msg(cmd='NICK', params=self.nick))
-        self.send(Msg(cmd='USER', params=[self.nick, '*', '*', ':' + self.nick]))
+        self.send(Msg(cmd='USER', params=[self.nick, '3', '*', ':' + self.nick]))
         self.send(Msg(cmd='JOIN', params=self.channels))
 
 
