@@ -1,1 +1,1 @@
-__all__ = ['config', 'connection', 'irc', 'replycodes']
+__all__ = ['config', 'connection', 'irc', 'publisher', 'replycodes', 'stdio']
