@@ -5,12 +5,23 @@
         }
     }, 
     "servers": {
-        "UFTC": {
+        "uftc": {
             "channels": [
                 "#bananaboat" 
             ], 
             "host": "irc.oftc.net", 
-            "nick": "bob239", 
+            "nick": "Modum", 
+            "port": 6667, 
+            "ssl": false, 
+            "timeout": 10
+        },
+        "freenode": {
+            "channels": [
+                "#bots",
+				"#bananaboat"
+            ], 
+            "host": "irc.freenode.net", 
+            "nick": "Modum", 
             "port": 6667, 
             "ssl": false, 
             "timeout": 10
