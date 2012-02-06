@@ -25,7 +25,7 @@ class Connection(object):
 
     def _create_socket(self):
         s = socket.socket()
-        #s.settimeout(self.timeout)
+        s.settimeout(self.timeout)
         return SSL.wrap_socket(s) if self.ssl else s
 
     def connect(self):

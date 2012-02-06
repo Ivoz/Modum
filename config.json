@@ -13,7 +13,7 @@
             "nick": "Modum", 
             "port": 6667, 
             "ssl": false, 
-            "timeout": 10
+            "timeout": 5
         },
         "freenode": {
             "channels": [
@@ -24,7 +24,7 @@
             "nick": "Modum", 
             "port": 6667, 
             "ssl": false, 
-            "timeout": 10
+            "timeout": 5
         }
     }
 }

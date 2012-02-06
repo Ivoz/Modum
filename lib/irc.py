@@ -19,7 +19,7 @@ class Irc(object):
                     server['ssl'], server['timeout'])
         self._receivers = []
         self._senders = []
-        self._sending = None
+        self._sending = []
         self._receiving = None
 
     @property
@@ -41,35 +41,39 @@ class Irc(object):
             return True
         self._conn.connect()
         if self._conn.connected:
-            self._sending = gevent.spawn(self._send)
-            self._receiving = gevent.spawn(self._receive)
+            self._receiving = gevent.spawn(self._receive_loop)
             gevent.spawn_later(1, self._register)
         return self._conn.connected
 
     def disconnect(self):
         if not self._conn.connected:
             return False
-        self._sending.kill()
+        gevent.killall(self._sending)
         self._receiving.kill()
+        self._senders = []
+        self._receivers = []
+        self._sending = []
+        self._receiving = None
         self._conn.disconnect()
         return self._conn.connected
 
-    def addReceiver(self, receiver):
+    def add_receiver(self, receiver):
         self._receivers.append(receiver)
 
-    def _receive(self):
-        for line in self._conn.iQ.get():
+    def _receive_loop(self):
+        for line in self._conn.iQ:
             for r in self._receivers:
                 r.put(line)
 
-    def addSender(self, sender):
+    def add_sender(self, sender):
         self._senders.append(sender)
+        self._sending.append(self._send_loop(sender))
 
-    def _send(self):
-        while True:
-            for s in self._senders:
-                if not s.empty():
-                    self._conn.oQ.put(s.get())
+    def _send_loop(self, sender):
+        def new_sender():
+            for line in sender:
+                self._conn.oQ.put(line)
+        return gevent.spawn(new_sender)
 
     def _register(self):
         self.nick = self._nick

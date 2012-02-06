@@ -1,5 +1,4 @@
 import os
-import gevent
 from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
@@ -12,7 +11,6 @@ class Modum(object):
         self.config_path = config_path
         self.conf = Config(os.path.join(self.root_path, config_path))
         self.ircs = {}
-        self.bots = []
         self.stdio = StdIO()
         self.stdio.oQ.put("Bootin' this bitch up...")
         for name in self.conf.servers.keys():
@@ -23,11 +21,12 @@ class Modum(object):
         """Main method to start the bot up"""
         for name in self.ircs:
             self.ircs[name].connect()
-            self.ircs[name].addReceiver(self.stdio.oQ)
-            self.ircs[name].addSender(self.stdio.iQ)
+            self.ircs[name].add_receiver(self.stdio.oQ)
+            self.ircs[name].add_sender(self.stdio.iQ)
+        while True:
+            pass
 
     def stop(self):
-        gevent.joinall(self.bots)
         for irc in self.ircs.values():
             irc.disconnect()
         self.stdio.stop()
