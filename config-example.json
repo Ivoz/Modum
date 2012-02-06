@@ -1,0 +1,30 @@
+{
+    "plugin": {
+        "Google": {
+            "url": "http://google.com?q=%s"
+        }
+    }, 
+    "servers": {
+        "uftc": {
+            "channels": [
+                "#bananaboat" 
+            ], 
+            "host": "irc.oftc.net", 
+            "nick": "Modum", 
+            "port": 6667, 
+            "ssl": false, 
+            "timeout": 5
+        },
+        "freenode": {
+            "channels": [
+                "#bots",
+				"#bananaboat"
+            ], 
+            "host": "irc.freenode.net", 
+            "nick": "Modum", 
+            "port": 6667, 
+            "ssl": false, 
+            "timeout": 5
+        }
+    }
+}
