@@ -12,8 +12,8 @@ class StdIO(object):
     def __init__(self):
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, os.O_NONBLOCK)
         fcntl.fcntl(sys.stdout, fcntl.F_SETFL, os.O_NONBLOCK)
-        self.iQ = Queue()
-        self.oQ = Queue()
+        self.input = Queue()
+        self.output = Queue()
         self._i = gevent.spawn(self._input)
         self._o = gevent.spawn(self._output)
 
@@ -24,10 +24,10 @@ class StdIO(object):
             buff += sys.stdin.read()
             while '\n' in buff:
                 line, buff = buff.split('\n', 1)
-                self.iQ.put(line)
+                self.input.put(line)
 
     def _output(self):
-        for line in self.oQ:
+        for line in self.output:
             sys.stdout.write(line + '\n')
             sys.stdout.flush()
 

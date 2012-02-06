@@ -15,12 +15,8 @@ class Irc(object):
         self.name = name
         self._nick = server['nick']
         self._channels = server['channels']
-        self._conn = Connection(server['host'], server['port'],
+        self.conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
-        self._receivers = []
-        self._senders = []
-        self._sending = []
-        self._receiving = None
 
     @property
     def nick(self):
@@ -37,43 +33,18 @@ class Irc(object):
         return self._channels
 
     def connect(self):
-        if self._conn.connected:
+        if self.conn.connected:
             return True
-        self._conn.connect()
-        if self._conn.connected:
-            self._receiving = gevent.spawn(self._receive_loop)
+        self.conn.connect()
+        if self.conn.connected:
             gevent.spawn_later(1, self._register)
-        return self._conn.connected
+        return self.conn.connected
 
     def disconnect(self):
-        if not self._conn.connected:
+        if not self.conn.connected:
             return False
-        gevent.killall(self._sending)
-        self._receiving.kill()
-        self._senders = []
-        self._receivers = []
-        self._sending = []
-        self._receiving = None
-        self._conn.disconnect()
-        return self._conn.connected
-
-    def add_receiver(self, receiver):
-        self._receivers.append(receiver)
-
-    def _receive_loop(self):
-        for line in self._conn.iQ:
-            for r in self._receivers:
-                r.put(line)
-
-    def add_sender(self, sender):
-        self._senders.append(sender)
-        self._sending.append(self._send_loop(sender))
-
-    def _send_loop(self, sender):
-        def new_sender():
-            for line in sender:
-                self._conn.oQ.put(line)
-        return gevent.spawn(new_sender)
+        self.conn.disconnect()
+        return self.conn.connected
 
     def _register(self):
         self.nick = self._nick
@@ -82,7 +53,7 @@ class Irc(object):
 
 # TODO: Not totally sure about this interface yet.
     def send(self, msg):
-        self._conn.oQ.put(str(msg))
+        self.conn.output.put(str(msg))
 
 
 # TODO: allow for saving new params to the config, e.g nick changes

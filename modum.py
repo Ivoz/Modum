@@ -1,9 +1,9 @@
 import os
 import gevent
-from gevent.queue import Queue
 from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
+from lib.publisher import Publisher
 
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
@@ -14,27 +14,21 @@ class Modum(object):
         self.conf = Config(os.path.join(self.root_path, config_path))
         self.ircs = {}
         self.stdio = StdIO()
-        self.stdio.oQ.put("Bootin' this bitch up...")
+        self.stdio.output.put("Bootin' this bitch up...")
+        self.publisher = Publisher()
         for name in self.conf.servers.keys():
             irc = Irc(self.conf.servers[name], name)
             self.ircs[name] = irc
 
     def run(self):
         """Main method to start the bot up"""
-        dups = {name : Queue() for name in self.ircs}
-        loop = self.queue_dup(self.stdio.iQ, dups.values())
-        for name in self.ircs:
-            self.ircs[name].connect()
-            self.ircs[name].add_receiver(self.stdio.oQ)
-            self.ircs[name].add_sender(dups[name])
-        loop.join()
-
-    def queue_dup(self, q, dups):
-        def _dup():
-            for line in q:
-                for dup in dups:
-                    dup.put(line)
-        return gevent.spawn(_dup)
+        self.publisher.publish(self.stdio.input)
+        for irc in self.ircs.values():
+            irc.connect()
+            self.publisher.publish(irc.conn.input)
+            self.publisher.subscribe(self.stdio.output, irc.conn.input)
+            self.publisher.subscribe(irc.conn.output, self.stdio.input)
+        gevent.joinall(self.publisher.publications.values())
 
     def stop(self):
         for irc in self.ircs.values():

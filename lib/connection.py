@@ -11,17 +11,18 @@ class Connection(object):
 
 # TODO: Work out how timeouts need to work...
     def __init__(self, host, port, ssl=False, timeout=10):
-        self._ibuffer = ''
-        self._obuffer = ''
-        self.iQ = Queue()
-        self.oQ = Queue()
+        self.input = Queue()
+        self.output = Queue()
         self.host = host
         self.port = port
         self.ssl = ssl
         self.timeout = timeout
-        self._sock = self._create_socket()
         self.connected = False
-        self.jobs = []
+        self._sock = self._create_socket()
+        self._ibuffer = ''
+        self._obuffer = ''
+        self._send_loop = None
+        self._recv_loop = None
 
     def _create_socket(self):
         s = socket.socket()
@@ -32,22 +33,26 @@ class Connection(object):
         if not self.connected:
             err = self._sock.connect_ex((self.host, self.port))
             if (err == 0):
-                self.jobs = [gevent.spawn(l) for l in [self._send, self._receive]]
+                self._send_loop = gevent.spawn(self._send)
+                self._recv_loop = gevent.spawn(self._receive)
                 self.connected = True
             else:
                 return err
 
     def disconnect(self):
         if self.connected:
-            gevent.killall(self.jobs)
+            gevent.killall([self._send_loop, self._recv_loop])
             # Disallow further receives
             self._sock.shutdown(0)
+            gevent.sleep(1)
             self._sock.close()
+            self._ibuffer = ''
+            self._obuffer = ''
             self.connected = False
 
     def _send(self):
         while True:
-            line = self.oQ.get()
+            line = self.output.get()
             self._obuffer += line.encode('utf_8', errors='replace') + CRLF
             while self._obuffer:
                 sent = self._sock.send(self._obuffer)
@@ -59,4 +64,4 @@ class Connection(object):
             self._ibuffer += data
             while CRLF in self._ibuffer:
                 line, self._ibuffer = self._ibuffer.split(CRLF, 1)
-                self.iQ.put(line)
+                self.input.put(line)
