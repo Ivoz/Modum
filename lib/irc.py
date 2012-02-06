@@ -1,4 +1,5 @@
 from lib.connection import Connection
+from collections import deque
 #import replycodes
 
 # Constants for IRC special chars
@@ -16,6 +17,9 @@ class Irc(object):
         self.channels = server['channels']
         self.conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
+        self.host = ''
+        self.i_history = deque(maxlen=100)
+        self.o_history = deque(maxlen=100)
 
     def connect(self):
         self.conn.connect()
@@ -27,10 +31,20 @@ class Irc(object):
 
 # TODO: Not totally sure about this interface yet.
     def send(self, cmd):
+        self.o_history.append(cmd)
         self.conn.oqueue.put(cmd)
+        print cmd
 
     def receive(self):
-        return self.conn.iqueue.get()
+        msg = self.conn.iqueue.get()
+        self.i_history.append(msg)
+        return msg
+
+    def register(self):
+        self.send(Msg(cmd='NICK', params=self.nick))
+        self.send(Msg(cmd='USER', params=[self.nick, '*', '*', ':' + self.nick]))
+        self.send(Msg(cmd='JOIN', params=self.channels))
+
 
 # TODO: allow for saving new params to the config, e.g nick changes
     #def save(config)
@@ -39,10 +53,11 @@ class Irc(object):
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, msg=None):
-        self.prefix = ''
-        self.cmd = ''
-        self.params = []
+    def __init__(self, prefix='', cmd='', params='', msg=None):
+        self.prefix = prefix
+        self.cmd = cmd
+        self.params = [params] if (type(params) != list) else params
+        print params, self.params
         if msg != None:
             self.decode(msg)
 

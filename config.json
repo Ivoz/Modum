@@ -7,9 +7,7 @@
     "servers": {
         "UFTC": {
             "channels": [
-                "#tom", 
-                "#dick", 
-                "#harry"
+                "#bananaboat" 
             ], 
             "host": "irc.oftc.net", 
             "nick": "bob239", 
