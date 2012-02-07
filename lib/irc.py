@@ -2,7 +2,7 @@ import gevent
 from gevent.queue import Queue
 from lib.connection import Connection
 from lib.publisher import Publisher
-#import replycodes
+from lib.replycodes import replycodes
 
 # Constants for IRC special chars
 SPACE = ' '
@@ -15,30 +15,17 @@ class Irc(object):
 
     def __init__(self, server, name):
         self.name = name
-        self._nick = server['nick']
-        self._channels = server['channels']
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
+        self.wait_for_connection = self._conn.connection.wait
         # The canonical channels of IRC to subscribe / publish
-        # Receives input to send
+        # Receives input to send to irc server
         self.input = Queue()
         # Receives output to publish
         self.output = Queue()
-        self.publisher = Publisher([self._conn.receiver, self.input])
-
-    @property
-    def nick(self):
-        return self._nick
-
-    @nick.setter
-    def nick(self, value):
-        self.send(Msg(cmd='NICK', params=value))
-# TODO: Check that nick is not taken
-        self._nick = value
-
-    @property
-    def channels(self):
-        return self._channels
+        self.publisher = Publisher()
+        self.publisher.publish(self.input, str)
+        self.publisher.publish(self._conn.receiver, Msg)
 
     @property
     def connected(self):
@@ -47,50 +34,49 @@ class Irc(object):
     def connect(self):
         if self.connected:
             return True
-        self._conn.connect()
+        err = self._conn.connect()
         if self.connected:
             # Suscribe my output to receive data from connection
             self.publisher.subscribe(self.output, self._conn.receiver)
             # Subscribe connection to send data from my input
             self.publisher.subscribe(self._conn.sender, self.input)
             gevent.spawn_later(2, self._register)
-        return self.connected
+            return True
+        else:
+            return err
 
     def disconnect(self):
-        if not self.connected:
-            return False
         self._conn.disconnect()
         return self.connected
 
+# TODO: Temporary. This stuff should be moved to the client
     def _register(self):
-        self.nick = self._nick
-        self.send(Msg(cmd='USER', params=[self.nick, '+i+s+w', '*', ':' + self.nick]))
-        self.send(Msg(cmd='JOIN', params=','.join(self._channels)))
-
-# TODO: Not totally sure about this interface yet.
-    def send(self, msg):
-        self.input.put(str(msg))
-
-
-# TODO: allow for saving new params to the config, e.g nick changes
-    #def save(config)
+        nick = 'bob459'
+        channels = '#bots,#bananaboat'
+        self.input.put(Msg(cmd='NICK', params=[nick]))
+        self.input.put(Msg(cmd='USER', params=[nick, '8', '*', ':' + nick]))
+        self.input.put(Msg(cmd='JOIN', params=[channels]))
 
 
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, prefix='', cmd='', params='', msg=None):
+    def __init__(self, msg=None, prefix='', cmd='', params=None):
         self.prefix = prefix
         self.cmd = cmd
-        self.params = [params] if (type(params) != list) else params
-        if msg != None:
+        self.params = params if params is not None else []
+        if msg is not None:
             self.decode(msg)
 
     def decode(self, msg):
+# TODO: remove this debugging print
+        print msg
         if msg.startswith(DELIM):
             self.prefix, msg = msg[1:].split(SPACE, 1)
             msg = msg.lstrip(SPACE)
         self.cmd, msg = msg.split(SPACE, 1)
+        if self.cmd in replycodes:
+            self.cmd = replycodes[self.cmd]
         while (len(msg) > 0):
             msg = msg.lstrip(SPACE)
             if msg.startswith(DELIM):
@@ -118,13 +104,3 @@ class Msg(object):
 
     def __str__(self):
         return self.encode()
-
-
-class User(object):
-
-    def __init__(self, userstring):
-        self.prefix = ''
-        self.name = ''
-        self.host = ''
-        self.server = ''
-        self.real = ''

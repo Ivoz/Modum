@@ -1,7 +1,9 @@
 import gevent
-from gevent import socket
+from gevent.event import Event
 from gevent.queue import Queue
+from gevent import socket
 from gevent import ssl as SSL
+from gevent.timeout import Timeout
 
 CRLF = '\r\n'
 
@@ -9,7 +11,6 @@ CRLF = '\r\n'
 class Connection(object):
     """ Manages a line-by-line TCP connection """
 
-# TODO: Work out how timeouts need to work...
     def __init__(self, host, port, ssl=False, timeout=10):
         self.receiver = Queue()
         self.sender = Queue()
@@ -17,7 +18,7 @@ class Connection(object):
         self.port = port
         self.ssl = ssl
         self.timeout = timeout
-        self.connected = False
+        self.connection = Event()
         self._sock = self._create_socket()
         self._ibuffer = ''
         self._obuffer = ''
@@ -26,18 +27,23 @@ class Connection(object):
 
     def _create_socket(self):
         s = socket.socket()
-        #s.settimeout(self.timeout)
         return SSL.wrap_socket(s) if self.ssl else s
+
+    @property
+    def connected(self):
+        return self.connection.is_set()
 
     def connect(self):
         if not self.connected:
-            err = self._sock.connect_ex((self.host, self.port))
-            if (err == 0):
+            try:
+                self._sock.connect((self.host, self.port))
+            except socket.error as (errno, strerror):
+                return strerror
+            else:
                 self._send_loop = gevent.spawn(self._send)
                 self._recv_loop = gevent.spawn(self._receive)
-                self.connected = True
-            else:
-                return err
+                self.connection.set()
+                return True
 
     def disconnect(self):
         if self.connected:
@@ -48,15 +54,20 @@ class Connection(object):
             self._sock.close()
             self._ibuffer = ''
             self._obuffer = ''
-            self.connected = False
+            self.connection.clear()
 
     def _send(self):
         while True:
             line = self.sender.get()
             self._obuffer += line.encode('utf_8', errors='replace') + CRLF
             while self._obuffer:
-                sent = self._sock.send(self._obuffer)
-                self._obuffer = self._obuffer[sent:]
+                try:
+                    sent = gevent.with_timeout(self.timeout,
+                            self._sock.send,self._obuffer)
+                except Timeout:
+                    self.disconnect()
+                else:
+                    self._obuffer = self._obuffer[sent:]
 
     def _receive(self):
         while True:
