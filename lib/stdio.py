@@ -12,7 +12,9 @@ class StdIO(object):
     def __init__(self):
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, os.O_NONBLOCK)
         fcntl.fcntl(sys.stdout, fcntl.F_SETFL, os.O_NONBLOCK)
+        # The queue for stdin
         self.input = Queue()
+        # The queue for stdout
         self.output = Queue()
         self._i = gevent.spawn(self._input)
         self._o = gevent.spawn(self._output)

@@ -1,5 +1,7 @@
 import gevent
+from gevent.queue import Queue
 from lib.connection import Connection
+from lib.publisher import Publisher
 #import replycodes
 
 # Constants for IRC special chars
@@ -15,8 +17,14 @@ class Irc(object):
         self.name = name
         self._nick = server['nick']
         self._channels = server['channels']
-        self.conn = Connection(server['host'], server['port'],
+        self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
+        # The canonical channels of IRC to subscribe / publish
+        # Receives input to send
+        self.input = Queue()
+        # Receives output to publish
+        self.output = Queue()
+        self.publisher = Publisher([self._conn.receiver, self.input])
 
     @property
     def nick(self):
@@ -32,28 +40,36 @@ class Irc(object):
     def channels(self):
         return self._channels
 
+    @property
+    def connected(self):
+        return self._conn.connected
+
     def connect(self):
-        if self.conn.connected:
+        if self.connected:
             return True
-        self.conn.connect()
-        if self.conn.connected:
-            gevent.spawn_later(1, self._register)
-        return self.conn.connected
+        self._conn.connect()
+        if self.connected:
+            # Suscribe my output to receive data from connection
+            self.publisher.subscribe(self.output, self._conn.receiver)
+            # Subscribe connection to send data from my input
+            self.publisher.subscribe(self._conn.sender, self.input)
+            gevent.spawn_later(2, self._register)
+        return self.connected
 
     def disconnect(self):
-        if not self.conn.connected:
+        if not self.connected:
             return False
-        self.conn.disconnect()
-        return self.conn.connected
+        self._conn.disconnect()
+        return self.connected
 
     def _register(self):
         self.nick = self._nick
-        self.send(Msg(cmd='USER', params=[self.nick, '3', '*', ':' + self.nick]))
+        self.send(Msg(cmd='USER', params=[self.nick, '+i+s+w', '*', ':' + self.nick]))
         self.send(Msg(cmd='JOIN', params=','.join(self._channels)))
 
 # TODO: Not totally sure about this interface yet.
     def send(self, msg):
-        self.conn.output.put(str(msg))
+        self.input.put(str(msg))
 
 
 # TODO: allow for saving new params to the config, e.g nick changes

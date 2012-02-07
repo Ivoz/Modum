@@ -2,11 +2,13 @@ import gevent
 
 class Publisher(object):
 
-    def __init__(self):
+    def __init__(self, initial_channels = []):
         self.channels = set()
         self.subscribers = set()
         self.subscriptions = {}
         self.publications = {}
+        for channel in initial_channels:
+            self.publish(channel)
 
     def subscribe(self, subscriber, channel):
         self.subscriptions[hash(channel)].add(subscriber)
@@ -17,6 +19,7 @@ class Publisher(object):
         self.subscribers.remove(subscriber)
 
     def publish(self, channel):
+        self.channels.add(channel)
         self.subscriptions[hash(channel)] = set()
         def publication():
             for article in channel:
@@ -28,3 +31,10 @@ class Publisher(object):
         self.publications[hash(channel)].kill()
         del self.subscriptions[hash(channel)]
         self.channels.remove(channel)
+
+    def join_loop(self):
+        gevent.joinall(self.publications.values())
+
+    def kill_loop(self):
+        for channel in self.channels:
+            self.unpublish(channel)

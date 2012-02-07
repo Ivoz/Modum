@@ -11,8 +11,8 @@ class Connection(object):
 
 # TODO: Work out how timeouts need to work...
     def __init__(self, host, port, ssl=False, timeout=10):
-        self.input = Queue()
-        self.output = Queue()
+        self.receiver = Queue()
+        self.sender = Queue()
         self.host = host
         self.port = port
         self.ssl = ssl
@@ -52,7 +52,7 @@ class Connection(object):
 
     def _send(self):
         while True:
-            line = self.output.get()
+            line = self.sender.get()
             self._obuffer += line.encode('utf_8', errors='replace') + CRLF
             while self._obuffer:
                 sent = self._sock.send(self._obuffer)
@@ -64,4 +64,4 @@ class Connection(object):
             self._ibuffer += data
             while CRLF in self._ibuffer:
                 line, self._ibuffer = self._ibuffer.split(CRLF, 1)
-                self.input.put(line)
+                self.receiver.put(line)

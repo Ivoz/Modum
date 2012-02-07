@@ -1,14 +1,16 @@
 import os
-import gevent
 from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
 from lib.publisher import Publisher
 
+plugin_paths = ['lib/plugins', 'plugins']
+
+
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
 
-    def __init__(self, config_path):
+    def __init__(self, config_path='config.json', plugins=plugin_paths):
         self.root_path = os.path.abspath('')
         self.config_path = config_path
         self.conf = Config(os.path.join(self.root_path, config_path))
@@ -25,10 +27,23 @@ class Modum(object):
         self.publisher.publish(self.stdio.input)
         for irc in self.ircs.values():
             irc.connect()
-            self.publisher.publish(irc.conn.input)
-            self.publisher.subscribe(self.stdio.output, irc.conn.input)
-            self.publisher.subscribe(irc.conn.output, self.stdio.input)
-        gevent.joinall(self.publisher.publications.values())
+            self.publisher.publish(irc.output)
+            # Subscribe stdout to Irc's output
+            self.publisher.subscribe(self.stdio.output, irc.output)
+            # Subscribe the Irc input to stdin
+            self.publisher.subscribe(irc.input, self.stdio.input)
+# TODO: Temporary hack to see the bot's commands as well
+            irc.publisher.subscribe(self.stdio.output, irc.input)
+        import gevent; gevent.sleep(30000)
+
+    # Load a plugin
+    def load(self, paths):
+        def load_plugin():
+            pass
+
+        for path in paths:
+            pass
+
 
     def stop(self):
         for irc in self.ircs.values():
