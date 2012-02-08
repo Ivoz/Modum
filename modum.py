@@ -1,6 +1,6 @@
 import os
 import gevent
-from lib.irc import Irc, Msg
+from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
 from lib.publisher import Publisher
@@ -38,15 +38,17 @@ class Modum(object):
                 del self.connections[name]
                 continue
             clients.append(client.instance)
-## TODO: Temporary method of seeing all commands on stdout
+# TODO: Temporary method of seeing all commands on stdout
+# TODO: Work why the fuck this grinds everything to a half
             #self.publisher.publish(irc.receiver)
             #self.publisher.publish(irc.sender)
             #self.publisher.subscribe(self.stdio.output, irc.receiver, str)
             #self.publisher.subscribe(self.stdio.output, irc.sender, str)
         gevent.joinall(clients)
+        self.stop()
 
     def stop(self):
-        for irc in self.connections.values():
+        for irc, _ in self.connections.values():
             irc.disconnect()
         self.stdio.stop()
 

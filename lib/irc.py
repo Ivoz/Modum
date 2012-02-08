@@ -56,6 +56,9 @@ class Msg(object):
         self.cmd = cmd
         self.params = params if params is not None else []
         self.server = False
+        self.nick = None
+        self.user = None
+        self.host = None
         if msg is not None:
             self.decode(msg)
 
@@ -68,6 +71,13 @@ class Msg(object):
             self.cmd = replycodes[self.cmd]
         if (self.cmd.startswith('RPL_') or self.cmd.startswith('ERR_')):
             self.server = True
+            self.host = self.prefix
+        else:
+            try:
+                self.nick, left = self.prefix.split('!', 1)
+                self.user, self.host = left.split('@', 1)
+            except:
+                pass
         while (len(msg) > 0):
             if msg.startswith(DELIM):
                 self.params.append(msg[1:])
@@ -87,11 +97,7 @@ class Msg(object):
         self.params[-1] = ':' + self.params[-1]
         for p in self.params:
             msg += SPACE
-            if SPACE in p:
-                msg += DELIM + p
-                break
-            else:
-                msg += p
+            msg += p
         return msg
 
     def __repr__(self):

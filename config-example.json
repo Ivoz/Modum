@@ -5,7 +5,7 @@
         }
     }, 
     "servers": {
-        "uftc": {
+        "oftc": {
 			"autoretry": false,
             "channels": [
                 "#bananaboat" 
