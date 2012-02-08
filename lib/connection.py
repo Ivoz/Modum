@@ -59,6 +59,7 @@ class Connection(object):
     def _send(self):
         while True:
             line = self.sender.get()
+# TODO: DEBUGGINGZOR
             print line
             self._obuffer += line.encode('utf_8', errors='replace') + CRLF
             while self._obuffer:
@@ -76,5 +77,6 @@ class Connection(object):
             self._ibuffer += data
             while CRLF in self._ibuffer:
                 line, self._ibuffer = self._ibuffer.split(CRLF, 1)
+# TODO: DEBUGGINGZOR
                 print line
                 self.receiver.put(line)
