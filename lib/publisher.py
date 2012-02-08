@@ -8,21 +8,21 @@ class Publisher(object):
         self.subscriptions = {}
         self.publications = {}
 
-    def subscribe(self, subscriber, channel):
-        self.subscriptions[hash(channel)].add(subscriber)
+    def subscribe(self, subscriber, channel, modifier=lambda x: x):
+        self.subscriptions[hash(channel)][hash(subscriber)] = (subscriber, modifier)
         self.subscribers.add(subscriber)
 
     def unsubscribe(self, subscriber, channel):
-        self.subscriptions[hash(channel)].remove(subscriber)
+        del self.subscriptions[hash(channel)][hash(subscriber)]
         self.subscribers.remove(subscriber)
 
-    def publish(self, channel, modify=lambda x: x):
+    def publish(self, channel):
         self.channels.add(channel)
-        self.subscriptions[hash(channel)] = set()
+        self.subscriptions[hash(channel)] = {}
         def publication():
             for article in channel:
-                for sub in self.subscriptions[hash(channel)]:
-                    sub.put(modify(article))
+                for subscriber, modifier in self.subscriptions[hash(channel)].values():
+                    subscriber.put(modifier(article))
         self.publications[hash(channel)] = gevent.spawn(publication)
 
     def unpublish(self, channel):

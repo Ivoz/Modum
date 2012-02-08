@@ -1,8 +1,10 @@
 import os
-from lib.irc import Irc
+import gevent
+from lib.irc import Irc, Msg
 from lib.config import Config
 from lib.stdio import StdIO
 from lib.publisher import Publisher
+from lib.client import Client
 
 plugin_paths = ['lib/plugins', 'plugins']
 
@@ -15,34 +17,36 @@ class Modum(object):
         self.config_path = config_path
         self.conf = Config(os.path.join(self.root_path, config_path))
         self.plugin_paths = plugins if plugins is not None else plugin_paths
-        self.ircs = {}
+        self.connections = {}
         self.stdio = StdIO()
         self.stdio.output.put("Bootin' this bitch up...")
         self.publisher = Publisher()
         for name in self.conf.servers.keys():
-            irc = Irc(self.conf.servers[name], name)
-            self.ircs[name] = irc
+            conf = self.conf.servers[name]
+            irc = Irc(conf, name)
+            client = Client(irc, conf, self.stdio)
+            self.connections[name] = (irc, client)
 
     def run(self):
         """Main method to start the bot up"""
-        from lib.irc import Msg
-        self.publisher.publish(self.stdio.input, Msg)
-        for irc in self.ircs.values():
+        clients = []
+        for (irc, client) in self.connections.values():
             err = irc.connect()
             if err != True:
                 self.stdio.put("Error connecting to {0}: {1}".format(irc.name, err))
+                name = irc.name
+                del self.connections[name]
                 continue
-            self.publisher.publish(irc.output, str)
-            # Subscribe stdout to Irc's output
-            #self.publisher.subscribe(self.stdio.output, irc.output)
-            # Subscribe the Irc input to stdin
-            #self.publisher.subscribe(irc.input, self.stdio.input)
-# TODO: Temporary hack to see the bot's commands as well
-            #irc.publisher.subscribe(self.stdio.output, irc.input)
-        self.publisher.join_loop()
+            clients.append(client.instance)
+## TODO: Temporary method of seeing all commands on stdout
+            #self.publisher.publish(irc.receiver)
+            #self.publisher.publish(irc.sender)
+            #self.publisher.subscribe(self.stdio.output, irc.receiver, str)
+            #self.publisher.subscribe(self.stdio.output, irc.sender, str)
+        gevent.joinall(clients)
 
     def stop(self):
-        for irc in self.ircs.values():
+        for irc in self.connections.values():
             irc.disconnect()
         self.stdio.stop()
 
