@@ -150,7 +150,7 @@ class Client(object):
     def QUIT(self, msg):
         if self.nick == msg.nick:
             pass
-        for channel in msg.params[0].split(','):
+        for channel in self.channels:
             self.channels[channel].QUIT(msg)
 
     def unknown(self, msg):
