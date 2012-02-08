@@ -6,6 +6,7 @@
     }, 
     "servers": {
         "uftc": {
+			"autoretry": false,
             "channels": [
                 "#bananaboat" 
             ], 
@@ -16,6 +17,7 @@
             "timeout": 5
         },
         "freenode": {
+			"autoretry": false,
             "channels": [
                 "#bots",
 				"#bananaboat"
