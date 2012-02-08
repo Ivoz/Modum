@@ -95,29 +95,16 @@ class Client(object):
             self.irc.disconnect()
             self.receiving.put(gevent.timeout.Timeout())
 
-    def join(self, channel):
-        self.sending.put(Msg(cmd='JOIN', params=[channel]))
-
     def JOIN(self, msg):
         channel = msg.params[0]
         if self.nick == msg.nick:
             self.channels[channel] = Channel(self, channel)
         self.channels[channel].JOIN(msg)
 
-# TODO: Complete this, and MODE
-    def mode(self):
-        pass
-
     def MODE(self, msg):
         target = msg.params[0]
         if target in self.channels:
             self.channels[target].modes = msg.params[1]
-
-    def nick(self, name):
-        self.sending.put(Msg('NICK', params=[name]))
-
-    def notice(self, target, message):
-        self.sending.put(Msg(cmd='NOTICE', params=[target, message]))
 
     def NOTICE(self, msg):
         target = msg.params[0]
@@ -130,10 +117,6 @@ class Client(object):
         elif target in self.channels:
             self.channels[target].NOTICE(msg)
 
-    def part(self, channel, message=None):
-        pars = [channel, message] if message is not None else [channel]
-        self.sending.put(Msg(cmd='PART', params=pars))
-
     def PART(self, msg):
         if self.nick == msg.nick:
             del self.channels[msg.params[0]]
@@ -141,15 +124,9 @@ class Client(object):
             for channel in msg.params[0].split(','):
                 self.channels[channel].PART(msg)
 
-    def ping(self):
-        self.sending.put(Msg(cmd='PING', params=[self.servername]))
-
     def PING(self, msg):
         msg.cmd = 'PONG'
         self.sending.put(msg)
-
-    def privmsg(self, target, message):
-        self.sending.put(Msg(cmd='PRIVMSG', params=[target, message]))
 
     def PRIVMSG(self, msg):
         target = msg.params[0]
@@ -157,9 +134,6 @@ class Client(object):
             self.messagers[msg.nick] = (User(self, msg, target), msg.params[1])
         elif target in self.channels:
             self.channels[target].PRIVMSG(msg)
-
-    def quit(self):
-        self.sending.put(Msg(cmd='QUIT', params=['Goodbye']))
 
     def QUIT(self, msg):
         for channel in self.channels:
@@ -185,14 +159,6 @@ class User(object):
         if self.nick[0] not in self.special and not self.nick[0].isalpha():
             self.nick_prefix, self.nick = self.nick[0], self.nick[1:]
 
-    def privmsg(self, message):
-        """Send message to user"""
-        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.nick, message]))
-
-    def notice(self, message):
-        """Send notice to user"""
-        self.client.sending.put(Msg(cmd='NOTICE', params=[self.nick, message]))
-
 class Channel(object):
 
     def __init__(self, client, name, topic='', modes='', chantype=''):
@@ -213,17 +179,12 @@ class Channel(object):
         if msg.nick in self.users:
             del self.users[msg.nick]
 
-    def privmsg(self, message):
-        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.name, message]))
-
     def PRIVMSG(self, msg):
         self.privmsgs.append(msg)
 # TODO: Needs to be... pluginized! :D
         if self.client.nick in msg.params[1]:
-            self.privmsg("G'day, {0}".format(msg.nick))
-
-    def notice(self, message):
-        self.client.sending.put(Msg(cmd='NOTICE', params=[self.name, message]))
+            self.client.sending.put(Msg(cmd='PRIVMSG',
+                params=[self.name, "G'day, {0}".format(msg.nick)]))
 
     def NOTICE(self, msg):
         self.notices.append(msg)
