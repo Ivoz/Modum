@@ -160,6 +160,8 @@ class Client(object):
 
 class User(object):
 
+    special = '[]\`_^{|}'
+
     def __init__(self, client, msg, channel, nick=None):
         self.client = client
         self.nick = nick if nick is not None else msg.nick
@@ -167,12 +169,8 @@ class User(object):
         self.host = msg.host
         self.voiced = False
         self.chanop = False
-        if self.nick.startswith('+'):
-            self.voiced = channel
-            self.nick = self.nick[1:]
-        if self.nick.startswith('@'):
-            self.chanop = channel
-            self.nick = self.nick[1:]
+        if self.nick[0] not in self.special and not self.nick[0].isalpha():
+            self.nick_prefix, self.nick = self.nick[0], self.nick[1:]
 
     def send(self, text):
         self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.nick, text]))
