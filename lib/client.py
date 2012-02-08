@@ -1,6 +1,5 @@
 import gevent
 from gevent.queue import Queue
-from lib.publisher import Publisher
 from lib.irc import Msg
 
 class Client(object):
@@ -14,18 +13,18 @@ class Client(object):
         self.motd = None
         self.channels = {}
         self.messagers = {}
+        # Using these for now; if only this communicates with irc,
+        # then there's no need for another publishing loop here
         self.sending = Queue()
         self.receiving = Queue()
-        self.publisher = Publisher()
-        self.publisher.publish(self.sending)
+        self.publisher = irc.publisher
         self.publisher.subscribe(self.irc.sender, self.sending)
-        self.publisher.publish(self.irc.receiver)
         self.publisher.subscribe(self.receiving, self.irc.receiver)
         self.instance = gevent.spawn(self._event_loop)
-        self._backdoor = Queue()
-        self.publisher.publish(self.stdio.input)
-        self.publisher.subscribe(self._backdoor, self.stdio.input)
-        self.backdoor = gevent.spawn(self._back_door)
+        # Backdoor receiver to execute command line input
+        self._backinput = Queue()
+        self.publisher.subscribe(self._backinput, self.stdio.input)
+        self._backdoor = gevent.spawn(self._back_door)
 
     @property
     def connected(self):
@@ -37,25 +36,26 @@ class Client(object):
                 self.sending.put(Msg(cmd='NICK', params=[self.nick]))
                 self.sending.put(Msg(cmd='USER', params=[self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
-                    if not self.irc.connected:
+                    if msg is gevent.timeout.Timeout:
                         break
                     func = getattr(self, msg.cmd, self.unknown)
                     func(msg)
+                self._finish()
 
 # TODO: Figure out why this doesn't work
 # TODO: Add cleanup stuff
 
-    def finish(self, dieing):
+    def _finish(self):
         if self.config['autoretry']:
             self.stdio.output.put(self.irc.name + ' rejoining...')
             gevent.spawn(self.irc.connect)
         else:
             self.stdio.output.put(self.irc.name + ' shutting down...')
-            gevent.spawn(self.backdoor.kill)
+            gevent.spawn(self._backdoor.kill)
             gevent.spawn(self.instance.kill)
 
     def _back_door(self):
-        for line in self._backdoor:
+        for line in self._backinput:
             if line.startswith(self.irc.name):
                 line = line[len(self.irc.name):].lstrip()
                 exec(line)
@@ -93,7 +93,7 @@ class Client(object):
     def ERROR(self, msg):
         if self.nick == msg.nick:
             self.irc.disconnect()
-            self.finish(gevent.current)
+            self.receiving.put(gevent.timeout.Timeout())
 
     def join(self, channel):
         self.sending.put(Msg(cmd='JOIN', params=[channel]))
@@ -102,21 +102,37 @@ class Client(object):
         channel = msg.params[0]
         if self.nick == msg.nick:
             self.channels[channel] = Channel(self, channel)
-        else:
-            self.channels[channel].JOIN(msg)
+        self.channels[channel].JOIN(msg)
 
-    def notice(self, target, text):
-        self.sending.put(Msg(cmd='NOTICE', params=[target, text]))
+# TODO: Complete this, and MODE
+    def mode(self):
+        pass
+
+    def MODE(self, msg):
+        target = msg.params[0]
+        if target in self.channels:
+            self.channels[target].modes = msg.params[1]
+
+    def nick(self, name):
+        self.sending.put(Msg('NICK', params=[name]))
+
+    def notice(self, target, message):
+        self.sending.put(Msg(cmd='NOTICE', params=[target, message]))
 
     def NOTICE(self, msg):
         target = msg.params[0]
         if self.nick == target:
-            self.messagers[msg.nick] = (User(self, msg, target), msg.params[1])
+# TODO: Debug why this is happening
+            try:
+                self.messagers[msg.nick] = (User(self, msg, target), msg.params[1])
+            except ValueError:
+                print msg.nick, msg
         elif target in self.channels:
             self.channels[target].NOTICE(msg)
 
-    def part(self, channel):
-        self.sending.put(Msg(cmd='PART', params=[channel]))
+    def part(self, channel, message=None):
+        pars = [channel, message] if message is not None else [channel]
+        self.sending.put(Msg(cmd='PART', params=pars))
 
     def PART(self, msg):
         if self.nick == msg.nick:
@@ -132,8 +148,8 @@ class Client(object):
         msg.cmd = 'PONG'
         self.sending.put(msg)
 
-    def privmsg(self, target, text):
-        self.sending.put(Msg(cmd='PRIVMSG', params=[target, text]))
+    def privmsg(self, target, message):
+        self.sending.put(Msg(cmd='PRIVMSG', params=[target, message]))
 
     def PRIVMSG(self, msg):
         target = msg.params[0]
@@ -144,16 +160,13 @@ class Client(object):
 
     def quit(self):
         self.sending.put(Msg(cmd='QUIT', params=['Goodbye']))
-        dieing = gevent.spawn_later(1, self.irc.disconnect)
-        dieing.link(self.finish)
 
     def QUIT(self, msg):
-        if self.nick == msg.nick:
-            pass
         for channel in self.channels:
             self.channels[channel].QUIT(msg)
 
     def unknown(self, msg):
+        """Fallback handler"""
         if msg.cmd.isdigit():
             self.stdio.output.put("Unknown call: " + msg.cmd)
 
@@ -172,18 +185,21 @@ class User(object):
         if self.nick[0] not in self.special and not self.nick[0].isalpha():
             self.nick_prefix, self.nick = self.nick[0], self.nick[1:]
 
-    def send(self, text):
-        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.nick, text]))
+    def privmsg(self, message):
+        """Send message to user"""
+        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.nick, message]))
 
-    def notice(self, text):
-        self.client.sending.put(Msg(cmd='NOTICE', params=[self.nick, text]))
+    def notice(self, message):
+        """Send notice to user"""
+        self.client.sending.put(Msg(cmd='NOTICE', params=[self.nick, message]))
 
 class Channel(object):
 
-    def __init__(self, client, name, topic='', chantype=''):
+    def __init__(self, client, name, topic='', modes='', chantype=''):
         self.client = client
         self.name = name
         self.topic = topic
+        self.modes = modes
         self.chantype = chantype
         self.users = {}
         self.privmsgs = []
@@ -197,22 +213,20 @@ class Channel(object):
         if msg.nick in self.users:
             del self.users[msg.nick]
 
-    def privmsg(self, text):
-        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.name, text]))
+    def privmsg(self, message):
+        self.client.sending.put(Msg(cmd='PRIVMSG', params=[self.name, message]))
 
     def PRIVMSG(self, msg):
-        pm = (self.users[msg.nick], msg.params[1])
-        self.privmsgs.append(pm)
+        self.privmsgs.append(msg)
 # TODO: Needs to be... pluginized! :D
         if self.client.nick in msg.params[1]:
             self.privmsg("G'day, {0}".format(msg.nick))
 
-    def notice(self, text):
-        self.client.sending.put(Msg(cmd='NOTICE', params=[self.name, text]))
+    def notice(self, message):
+        self.client.sending.put(Msg(cmd='NOTICE', params=[self.name, message]))
 
     def NOTICE(self, msg):
-        nt = (self.users[msg.nick], msg.params[1])
-        self.privmsgs.append(nt)
+        self.notices.append(msg)
 
     def QUIT(self, msg):
         if msg.nick in self.users:

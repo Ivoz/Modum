@@ -23,7 +23,7 @@ class Modum(object):
         self.publisher = Publisher()
         for name in self.conf.servers.keys():
             conf = self.conf.servers[name]
-            irc = Irc(conf, name)
+            irc = Irc(conf, name, self.publisher)
             client = Client(irc, conf, self.stdio)
             self.connections[name] = (irc, client)
 
@@ -40,8 +40,6 @@ class Modum(object):
             clients.append(client.instance)
 # TODO: Temporary method of seeing all commands on stdout
 # TODO: Work why the fuck this grinds everything to a half
-            #self.publisher.publish(irc.receiver)
-            #self.publisher.publish(irc.sender)
             #self.publisher.subscribe(self.stdio.output, irc.receiver, str)
             #self.publisher.subscribe(self.stdio.output, irc.sender, str)
         gevent.joinall(clients)

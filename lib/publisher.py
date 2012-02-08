@@ -9,6 +9,8 @@ class Publisher(object):
         self.publications = {}
 
     def subscribe(self, subscriber, channel, modifier=lambda x: x):
+        if channel not in self.channels:
+            self.publish(channel)
         self.subscriptions[hash(channel)][hash(subscriber)] = (subscriber, modifier)
         self.subscribers.add(subscriber)
 

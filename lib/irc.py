@@ -1,6 +1,5 @@
 from gevent.queue import Queue
 from lib.connection import Connection
-from lib.publisher import Publisher
 from lib.replycodes import replycodes
 
 # Constants for IRC special chars
@@ -12,7 +11,7 @@ DELIM = ':'
 class Irc(object):
     """ Handles the IRC protocol """
 
-    def __init__(self, server, name):
+    def __init__(self, server, name, publisher):
         self.name = name
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
@@ -22,9 +21,7 @@ class Irc(object):
         self.sender = Queue()
         # Receives output to publish
         self.receiver = Queue()
-        self.publisher = Publisher()
-        self.publisher.publish(self.sender)
-        self.publisher.publish(self._conn.receiver)
+        self.publisher = publisher
         # Suscribe my output to receive data from connection
         self.publisher.subscribe(self.receiver, self._conn.receiver, Msg)
         # Subscribe connection to send data from my input
@@ -56,7 +53,7 @@ class Msg(object):
         self.cmd = cmd
         self.params = params if params is not None else []
         self.server = False
-        self.nick = None
+        self.nick = prefix
         self.user = None
         self.host = None
         if msg is not None:
@@ -77,7 +74,7 @@ class Msg(object):
             try:
                 self.nick, left = self.prefix.split('!', 1)
                 self.user, self.host = left.split('@', 1)
-            except:
+            except ValueError:
                 self.nick = self.prefix
         while (len(msg) > 0):
             if msg.startswith(DELIM):
