@@ -72,6 +72,7 @@ class Msg(object):
         if (self.cmd.startswith('RPL_') or self.cmd.startswith('ERR_')):
             self.server = True
             self.host = self.prefix
+            self.nick = self.prefix
         else:
             try:
                 self.nick, left = self.prefix.split('!', 1)
