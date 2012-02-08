@@ -78,7 +78,7 @@ class Msg(object):
                 self.nick, left = self.prefix.split('!', 1)
                 self.user, self.host = left.split('@', 1)
             except:
-                pass
+                self.nick = self.prefix
         while (len(msg) > 0):
             if msg.startswith(DELIM):
                 self.params.append(msg[1:])
