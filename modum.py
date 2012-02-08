@@ -6,25 +6,21 @@ from lib.stdio import StdIO
 from lib.publisher import Publisher
 from lib.client import Client
 
-plugin_paths = ['lib/plugins', 'plugins']
-
-
 class Modum(object):
     """ Modum, the Super Duper IRC bot """
 
-    def __init__(self, config_path='config.json', plugins=None):
+    def __init__(self, config_path='config.json'):
         self.root_path = os.path.abspath('')
         self.config_path = config_path
         self.conf = Config(os.path.join(self.root_path, config_path))
-        self.plugin_paths = plugins if plugins is not None else plugin_paths
         self.connections = {}
         self.stdio = StdIO()
         self.stdio.output.put("Bootin' this bitch up...")
         self.publisher = Publisher()
-        for name in self.conf.servers.keys():
-            conf = self.conf.servers[name]
-            irc = Irc(conf, name, self.publisher)
-            client = Client(irc, conf, self.stdio)
+        for name, server in self.conf.servers.items():
+            if not server['enabled']: continue
+            irc = Irc(server, name, self.publisher)
+            client = Client(irc, server, self.stdio)
             self.connections[name] = (irc, client)
 
     def run(self):
@@ -39,7 +35,7 @@ class Modum(object):
                 continue
             clients.append(client.instance)
 # TODO: Temporary method of seeing all commands on stdout
-# TODO: Work why the fuck this grinds everything to a half
+# TODO: Work out why the fuck this grinds everything to a half
             #self.publisher.subscribe(self.stdio.output, irc.receiver, str)
             #self.publisher.subscribe(self.stdio.output, irc.sender, str)
         gevent.joinall(clients)

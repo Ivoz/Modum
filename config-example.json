@@ -1,15 +1,18 @@
 {
     "plugin": {
         "Google": {
+			"enabled": false,
             "url": "http://google.com?q=%s"
         }
     }, 
     "servers": {
         "oftc": {
-			"autoretry": false,
+			"autoretry": true,
             "channels": [
-                "#bananaboat" 
+				"#bananaboat",
+                "#bots"
             ], 
+			"enabled": true,
             "host": "irc.oftc.net", 
             "nick": "Modum", 
             "port": 6667, 
@@ -17,11 +20,12 @@
             "timeout": 5
         },
         "freenode": {
-			"autoretry": false,
+			"autoretry": true,
             "channels": [
-                "#bots",
-				"#bananaboat"
+				"#bananaboat",
+                "#bots"
             ], 
+			"enabled": true,
             "host": "irc.freenode.net", 
             "nick": "Modum", 
             "port": 6667, 

@@ -26,20 +26,19 @@ class Client(object):
         self.publisher.subscribe(self._backinput, self.stdio.input)
         self._backdoor = gevent.spawn(self._back_door)
 
-    @property
-    def connected(self):
-        return self.irc.connected
-
     def _event_loop(self):
         while True:
             if self.irc.wait_for_connection(self.config['timeout']):
-                self.sending.put(Msg(cmd='NICK', params=[self.nick]))
-                self.sending.put(Msg(cmd='USER', params=[self.nick, '8', '*', self.nick]))
+                self.sending.put(Msg(cmd='NICK',
+                    params=[self.nick]))
+                self.sending.put(Msg(cmd='USER',
+                    params=[self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
                     if msg is gevent.timeout.Timeout:
                         break
                     func = getattr(self, msg.cmd, self.unknown)
-                    func(msg)
+                    #func(msg)
+                    gevent.spawn(func, msg)
                 self._finish()
 
 # TODO: Figure out why this doesn't work
@@ -58,12 +57,21 @@ class Client(object):
         for line in self._backinput:
             if line.startswith(self.irc.name):
                 line = line[len(self.irc.name):].lstrip()
-                exec(line)
+                gevent.spawn(self._do_exec, line)
+
+    def _do_exec(self, code):
+        exec code
+
+    def quit(self):
+        self.irc.disconnect()
+        gevent.spawn_later(1, self.receiving.put,
+                gevent.timeout.Timeout())
 
     def RPL_WELCOME(self, msg):
         self.nick = msg.params[0]
         self.servername = msg.prefix
-        self.sending.put(Msg(cmd='JOIN', params=[','.join(self.config['channels'])]))
+        self.sending.put(Msg(cmd='JOIN',
+            params=[','.join(self.config['channels'])]))
 
     def RPL_MOTDSTART(self, msg):
         self.motd = []
@@ -111,7 +119,7 @@ class Client(object):
         if self.nick == target:
 # TODO: Debug why this is happening
             try:
-                self.messagers[msg.nick] = (User(self, msg, target), msg.params[1])
+                self.messagers[msg.nick] = msg
             except ValueError:
                 print msg.nick, msg
         elif target in self.channels:
@@ -131,7 +139,11 @@ class Client(object):
     def PRIVMSG(self, msg):
         target = msg.params[0]
         if self.nick == target:
-            self.messagers[msg.nick] = (User(self, msg, target), msg.params[1])
+            self.messagers[msg.nick] = msg
+# TODO: Cheap hack to exec code. Replace with plugin ASAP.
+            if msg.params[1].startswith(self.nick + ': '):
+                gevent.spawn(self._do_exec,
+                        msg.params[1][len(self.nick + ': '):])
         elif target in self.channels:
             self.channels[target].PRIVMSG(msg)
 

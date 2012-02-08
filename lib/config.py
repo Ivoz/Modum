@@ -6,23 +6,27 @@ class Config(collections.MutableMapping):
 
     def __init__(self, config_path):
         self._settings = {
-            'servers' : {
-                'Default' : {
-                    'host'    : 'irc.oftc.net',
-                    'port'    : 6667,
-                    'ssl'     : False,
-                    'timeout' : 10,
-                    'nick'    : 'Modum',
-                    'channels' : ['#bots']
-                    }
+            'servers': {
+                "oftc": {
+                    "autoretry": False,
+                    "channels": [
+                        "#bots"
+                    ],
+                    "enabled": True,
+                    "host": "irc.oftc.net",
+                    "nick": "Modum",
+                    "port": 6667,
+                    "ssl": False,
+                    "timeout": 5
                 }
             }
+        }
         self.load(config_path)
         self.config_path = config_path
 
     def load(self, config_path):
         self._settings = json.load(open(config_path, 'r'),
-                encoding="ASCII")
+                encoding="utf8")
 
     def reload(self):
         self.load(self.config_path)
