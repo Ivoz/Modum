@@ -1,6 +1,8 @@
 import gevent
 from gevent.queue import Queue
 from lib.irc import Msg
+import traceback
+
 
 class Client(object):
 
@@ -38,8 +40,10 @@ class Client(object):
                     [self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
                     func = getattr(self, msg.cmd, self.unknown)
-                    func(msg)
-                    # gevent.spawn(func, msg)
+                    try:
+                        func(msg)
+                    except Exception as e:
+                        traceback.print_exc()
                 self._finish()
 # TODO: Add cleanup stuff
 
