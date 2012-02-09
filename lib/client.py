@@ -128,11 +128,12 @@ class Client(object):
         self.sending.put(Msg('NICK', self.nick))
 
     def ERROR(self, msg):
-        print "Quit!!!!!!"
         self.receiving.put(StopIteration)
 
     def JOIN(self, msg):
         channel = msg.params[0]
+        if self.nick == msg.nick:
+            self.channels[channel] = Channel(self, channel)
         self.channels[channel].JOIN(msg)
 
 # TODO: Complete this... a lot

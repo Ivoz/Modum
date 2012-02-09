@@ -1,1 +1,7 @@
-__all__ = ['config', 'connection', 'irc', 'publisher', 'replycodes', 'stdio']
+__all__ = ['client',
+           'config',
+           'connection',
+           'irc',
+           'publisher',
+           'replycodes',
+           'stdio']

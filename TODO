@@ -1,0 +1,12 @@
+Major:
+-Organise reconnection into IRC - do we want Client to die on disconnect?
+-Implement quitting cleanly!
+
+Possibles:
+-(Possibly) Organise and group all greenlet instances (so we can KILL THEM ALL)
+-Refactor receiving targeted commands to their targets
+-Allow for multiple clients per server - each plugin its own client?
+
+Ideas:
+-Implement cross-server communication (between clients? between bot?)
+-Decide whether bot should be cross-server, or per-server
