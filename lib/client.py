@@ -181,7 +181,7 @@ class Client(object):
 
     def QUIT(self, msg):
         for channel in self.channels.values():
-            self.channels.QUIT(msg)
+            channel.QUIT(msg)
 
 
 class User(object):
