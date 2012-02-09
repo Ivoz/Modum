@@ -1,6 +1,16 @@
 import gevent
 from gevent.queue import Queue
 from lib.irc import Msg
+from collections import defaultdict
+from functools import partial
+
+
+class SmartDefaultDict(defaultdict):
+    def __missing__(self, key):
+        value = self.default_factory(key)
+        self[key] = value
+        return value
+
 
 class Client(object):
 
@@ -15,7 +25,7 @@ class Client(object):
         self.op = '@'
         self.voice = '+'
         self.motd = None
-        self.channels = {}
+        self.channels = SmartDefaultDict(partial(Channel, self))
         self.messagers = {}
         # Using these for now; if only this communicates with irc,
         # then there's no need for another publishing loop here
@@ -128,8 +138,6 @@ class Client(object):
 
     def JOIN(self, msg):
         channel = msg.params[0]
-        if self.nick == msg.nick:
-            self.channels[channel] = Channel(self, channel)
         self.channels[channel].JOIN(msg)
 
 # TODO: Complete this... a lot
