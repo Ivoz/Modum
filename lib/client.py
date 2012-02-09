@@ -95,7 +95,7 @@ class Client(object):
                             self.op = val
                         if pref == 'v':
                             self.voice = val
-                except:
+                except StandardError:
                     pass
 
     def RPL_MOTDSTART(self, msg):
