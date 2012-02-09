@@ -38,7 +38,8 @@ class Client(object):
                     [self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
                     func = getattr(self, msg.cmd, self.unknown)
-                    gevent.spawn(func, msg)
+                    func(msg)
+                    # gevent.spawn(func, msg)
                 self._finish()
 # TODO: Add cleanup stuff
 
