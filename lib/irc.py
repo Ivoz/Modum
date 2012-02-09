@@ -1,11 +1,6 @@
 from gevent.queue import Queue
 from lib.connection import Connection
-from lib.replycodes import replycodes
-
-# Constants for IRC special chars
-SPACE = ' '
-NULL = '\0'
-DELIM = ':'
+from lib.replycodes import numerics
 
 
 class Irc(object):
@@ -23,7 +18,7 @@ class Irc(object):
         self.receiver = Queue()
         self.publisher = publisher
         # Suscribe my output to receive data from connection
-        self.publisher.subscribe(self.receiver, self._conn.receiver, Msg)
+        self.publisher.subscribe(self.receiver, self._conn.receiver, Msg.from_msg)
         # Subscribe connection to send data from my input
         self.publisher.subscribe(self._conn.sender, self.sender, str)
 
@@ -48,7 +43,7 @@ class Irc(object):
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, msg=None, prefix='', cmd='', params=None):
+    def __init__(self, cmd='', params=None, prefix=None, msg=None):
         self.prefix = prefix
         self.cmd = cmd
         self.params = params if params is not None else []
@@ -59,14 +54,19 @@ class Msg(object):
         if msg is not None:
             self.decode(msg)
 
+    @classmethod
+    def from_msg(cls, message):
+        return cls(msg=message)
+
     def decode(self, msg):
-        if msg.startswith(DELIM):
-            self.prefix, msg = msg[1:].split(SPACE, 1)
-            msg = msg.lstrip(SPACE)
-        self.cmd, msg = msg.split(SPACE, 1)
-        if self.cmd in replycodes:
-            self.cmd = replycodes[self.cmd]
-        if (self.cmd.startswith('RPL_') or self.cmd.startswith('ERR_')):
+        if msg.startswith(':'):
+            self.prefix, msg = msg[1:].split(' ', 1)
+        self.cmd, msg = msg.split(' ', 1)
+        #Needed to properly split 1 argument
+        msg = ' ' + msg
+        if self.cmd in numerics:
+            # Should be a server reply
+            self.cmd = numerics[self.cmd]
             self.server = True
             self.host = self.prefix
             self.nick = self.prefix
@@ -76,30 +76,25 @@ class Msg(object):
                 self.user, self.host = left.split('@', 1)
             except ValueError:
                 self.nick = self.prefix
-        while (len(msg) > 0):
-            if msg.startswith(DELIM):
-                self.params.append(msg[1:])
-                break
-            if SPACE in msg:
-                p, msg = msg.split(SPACE, 1)
-            else:
-                p = msg
-                msg = ''
-            self.params.append(p.strip(SPACE))
+        trailing = None
+        if ' :' in msg:
+            msg, trailing = msg.split(' :', 1)
+        self.params = filter(lambda x: len(x) > 0, msg.split(' '))
+        if trailing is not None:
+            self.params.append(trailing)
 
     def encode(self):
         msg = ''
-        if (len(self.prefix) > 0):
-            msg += DELIM + self.prefix + SPACE
+        if self.prefix is not None:
+            msg += ':' + self.prefix + ' '
         msg += self.cmd
+        if len(self.params) == 0:
+            return msg
         self.params[-1] = ':' + self.params[-1]
         for p in self.params:
-            msg += SPACE
+            msg += ' '
             msg += p
         return msg
-
-    def __repr__(self):
-        return self.encode()
 
     def __str__(self):
         return self.encode()

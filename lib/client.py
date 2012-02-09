@@ -10,6 +10,7 @@ class Client(object):
         self.config = config
         self.nick = config['nick']
         self.servername = None
+        # None when not received, [] when processing, '' when received
         self.motd = None
         self.channels = {}
         self.messagers = {}
@@ -29,24 +30,22 @@ class Client(object):
     def _event_loop(self):
         while True:
             if self.irc.wait_for_connection(self.config['timeout']):
-                self.sending.put(Msg(cmd='NICK',
-                    params=[self.nick]))
-                self.sending.put(Msg(cmd='USER',
-                    params=[self.nick, '8', '*', self.nick]))
+                self.sending.put(Msg('NICK', [self.nick]))
+                self.sending.put(Msg('USER',
+                    [self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
                     if msg is gevent.timeout.Timeout:
                         break
                     func = getattr(self, msg.cmd, self.unknown)
-                    #func(msg)
                     gevent.spawn(func, msg)
                 self._finish()
-
-# TODO: Figure out why this doesn't work
 # TODO: Add cleanup stuff
 
+# TODO: Figure out why this doesn't work, possibly move to Irc
     def _finish(self):
         if self.config['autoretry']:
             self.stdio.output.put(self.irc.name + ' rejoining...')
+            gevent.sleep(1)
             gevent.spawn(self.irc.connect)
         else:
             self.stdio.output.put(self.irc.name + ' shutting down...')
@@ -67,11 +66,16 @@ class Client(object):
         gevent.spawn_later(1, self.receiving.put,
                 gevent.timeout.Timeout())
 
+    def unknown(self, msg):
+        """Fallback handler"""
+        if msg.cmd.isdigit():
+            self.stdio.output.put("Unknown call: " + msg.cmd)
+
     def RPL_WELCOME(self, msg):
         self.nick = msg.params[0]
         self.servername = msg.prefix
-        self.sending.put(Msg(cmd='JOIN',
-            params=[','.join(self.config['channels'])]))
+        self.sending.put(Msg('JOIN',
+            [','.join(self.config['channels'])]))
 
     def RPL_MOTDSTART(self, msg):
         self.motd = []
@@ -95,7 +99,7 @@ class Client(object):
 
     def ERR_NICKNAMEINUSE(self, msg):
         self.nick += '_'
-        self.sending.put(Msg(cmd='NICK', params=[self.nick]))
+        self.sending.put(Msg('NICK', [self.nick]))
         self.stdio.output.put('Changing nick to ' + self.nick)
 
     def ERROR(self, msg):
@@ -151,11 +155,6 @@ class Client(object):
         for channel in self.channels:
             self.channels[channel].QUIT(msg)
 
-    def unknown(self, msg):
-        """Fallback handler"""
-        if msg.cmd.isdigit():
-            self.stdio.output.put("Unknown call: " + msg.cmd)
-
 
 class User(object):
 
@@ -195,8 +194,8 @@ class Channel(object):
         self.privmsgs.append(msg)
 # TODO: Needs to be... pluginized! :D
         if self.client.nick in msg.params[1]:
-            self.client.sending.put(Msg(cmd='PRIVMSG',
-                params=[self.name, "G'day, {0}".format(msg.nick)]))
+            self.client.sending.put(Msg('PRIVMSG',
+                [self.name, "G'day, {0}".format(msg.nick)]))
 
     def NOTICE(self, msg):
         self.notices.append(msg)

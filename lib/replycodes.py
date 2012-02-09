@@ -1,6 +1,6 @@
 # https://dev.freenode.net/redmine/projects/ircd-seven/repository/revisions/master/entry/include/numeric.h
 # https://www.alien.net.au/irc/irc2numerics.html
-replycodes = {
+numerics = {
 '001': 'RPL_WELCOME',
 '002': 'RPL_YOURHOST',
 '003': 'RPL_CREATED',
