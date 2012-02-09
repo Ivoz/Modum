@@ -1,15 +1,7 @@
 import gevent
 from gevent.queue import Queue
 from lib.irc import Msg
-from collections import defaultdict
-from functools import partial
-
-
-class SmartDefaultDict(defaultdict):
-    def __missing__(self, key):
-        value = self.default_factory(key)
-        self[key] = value
-        return value
+import traceback
 
 
 class Client(object):
@@ -48,7 +40,10 @@ class Client(object):
                     [self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
                     func = getattr(self, msg.cmd, self.unknown)
-                    gevent.spawn(func, msg)
+                    try:
+                        func(msg)
+                    except Exception as e:
+                        traceback.print_exc()
                 self._finish()
 # TODO: Add cleanup stuff
 
