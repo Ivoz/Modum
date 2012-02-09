@@ -17,7 +17,7 @@ class Client(object):
         self.op = '@'
         self.voice = '+'
         self.motd = None
-        self.channels = SmartDefaultDict(partial(Channel, self))
+        self.channels = {}
         self.messagers = {}
         # Using these for now; if only this communicates with irc,
         # then there's no need for another publishing loop here
