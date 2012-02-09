@@ -11,6 +11,9 @@ class Client(object):
         self.nick = config['nick']
         self.servername = None
         # None when not received, [] when processing, '' when received
+        self.options = {}
+        self.op = '@'
+        self.voice = '+'
         self.motd = None
         self.channels = {}
         self.messagers = {}
@@ -30,26 +33,26 @@ class Client(object):
     def _event_loop(self):
         while True:
             if self.irc.wait_for_connection(self.config['timeout']):
-                self.sending.put(Msg('NICK', [self.nick]))
+                self.sending.put(Msg('NICK', self.nick))
                 self.sending.put(Msg('USER',
                     [self.nick, '8', '*', self.nick]))
                 for msg in self.receiving:
-                    if msg is gevent.timeout.Timeout:
-                        break
                     func = getattr(self, msg.cmd, self.unknown)
                     gevent.spawn(func, msg)
                 self._finish()
 # TODO: Add cleanup stuff
 
-# TODO: Figure out why this doesn't work, possibly move to Irc
+# TODO: Figure out why this doesn't work, possibly move to Irc?
     def _finish(self):
-        if self.config['autoretry']:
-            self.stdio.output.put(self.irc.name + ' rejoining...')
-            gevent.sleep(1)
+        self.irc.disconnect()
+        if type(self.config['autoretry']) == int:
+            self.stdio.output.put('{0} reconnecting in {1} \
+                    seconds...'.format(self.irc.name, self.config['autoretry']))
+            gevent.sleep(self.config['autoretry'])
             gevent.spawn(self.irc.connect)
         else:
             self.stdio.output.put(self.irc.name + ' shutting down...')
-            gevent.spawn(self._backdoor.kill)
+            self._backinput.put(StopIteration)
             gevent.spawn(self.instance.kill)
 
     def _back_door(self):
@@ -62,9 +65,7 @@ class Client(object):
         exec code
 
     def quit(self):
-        self.irc.disconnect()
-        gevent.spawn_later(1, self.receiving.put,
-                gevent.timeout.Timeout())
+        self.sending.put(Msg('QUIT','Goodbye'))
 
     def unknown(self, msg):
         """Fallback handler"""
@@ -75,7 +76,27 @@ class Client(object):
         self.nick = msg.params[0]
         self.servername = msg.prefix
         self.sending.put(Msg('JOIN',
-            [','.join(self.config['channels'])]))
+            ','.join(self.config['channels'])))
+
+    def RPL_ISUPPORT(self, msg):
+        opts = msg.params[1:-1]
+        for option in opts:
+            if '=' in option:
+                key, value = option.split('=', 1)
+            else:
+                key = option
+                value = True
+            self.options[key] = value
+            if key == 'PREFIX':
+                try:
+                    prefixes, chars = value[1:].split(')', 1)
+                    for (pref, val) in zip(prefixes, chars):
+                        if pref == 'o':
+                            self.op = val
+                        if pref == 'v':
+                            self.voice = val
+                except:
+                    pass
 
     def RPL_MOTDSTART(self, msg):
         self.motd = []
@@ -92,20 +113,18 @@ class Client(object):
     def RPL_NAMREPLY(self, msg):
         channel = msg.params[2]
         chantype = msg.params[1]
-        users = [User(self, msg, channel, name) for name in msg.params[3].split(' ')]
+        users = [User(self, channel, msg, name) for name in msg.params[3].split(' ')]
         self.channels[channel].chantype = chantype
         for user in users:
             self.channels[channel].users[user.nick] = user
 
     def ERR_NICKNAMEINUSE(self, msg):
         self.nick += '_'
-        self.sending.put(Msg('NICK', [self.nick]))
-        self.stdio.output.put('Changing nick to ' + self.nick)
+        self.sending.put(Msg('NICK', self.nick))
 
     def ERROR(self, msg):
-        if self.nick == msg.nick:
-            self.irc.disconnect()
-            self.receiving.put(gevent.timeout.Timeout())
+        print "Quit!!!!!!"
+        self.receiving.put(StopIteration)
 
     def JOIN(self, msg):
         channel = msg.params[0]
@@ -113,10 +132,19 @@ class Client(object):
             self.channels[channel] = Channel(self, channel)
         self.channels[channel].JOIN(msg)
 
+# TODO: Complete this... a lot
     def MODE(self, msg):
         target = msg.params[0]
         if target in self.channels:
-            self.channels[target].modes = msg.params[1]
+            self.channels[target].MODE(msg)
+
+    def NICK(self, msg):
+        old = msg.nick
+        new = msg.params[0]
+        if self.nick == old:
+            self.nick = new
+        for channel in filter(lambda x: old in x.users, self.channels.values()):
+            channel.NICK(msg)
 
     def NOTICE(self, msg):
         target = msg.params[0]
@@ -152,23 +180,33 @@ class Client(object):
             self.channels[target].PRIVMSG(msg)
 
     def QUIT(self, msg):
-        for channel in self.channels:
-            self.channels[channel].QUIT(msg)
+        for channel in self.channels.values():
+            self.channels.QUIT(msg)
 
 
 class User(object):
 
     special = '[]\`_^{|}'
 
-    def __init__(self, client, msg, channel, nick=None):
+    def __init__(self, client, channel, msg, name=None):
         self.client = client
-        self.nick = nick if nick is not None else msg.nick
-        self.user = msg.user
-        self.host = msg.host
-        self.voiced = False
-        self.chanop = False
+        self.channel = channel
+        self.nick = name if name is not None else msg.nick
+        self.oldnicks = []
+        self.user = msg.user if name is None else ''
+        self.host = msg.host if name is None else ''
+        self.prefix = ''
         if self.nick[0] not in self.special and not self.nick[0].isalpha():
-            self.nick_prefix, self.nick = self.nick[0], self.nick[1:]
+            self.prefix, self.nick = self.nick[0], self.nick[1:]
+        self.voiced = True if self.prefix == self.client.voice else False
+        self.chanop = True if self.prefix == self.client.op else False
+
+    def NICK(self, msg):
+        if self.nick == msg.nick:
+            self.oldnicks.append(self.nick)
+            self.nick = msg.params[0]
+            self.user = msg.user
+            self.host = msg.host
 
 class Channel(object):
 
@@ -183,8 +221,21 @@ class Channel(object):
         self.notices = []
 
     def JOIN(self, msg):
-        user = User(self, msg, self.name)
+        user = User(self.client, self.name, msg)
         self.users[user.nick] = user
+
+# TODO: Complete
+    def MODE(self, msg):
+        pass
+
+    def NICK(self, msg):
+        if msg.nick in self.users:
+            self.users[msg.params[0]] = self.users[msg.nick]
+            self.users[msg.params[0]].NICK(msg)
+            del self.users[msg.nick]
+
+    def NOTICE(self, msg):
+        self.notices.append(msg)
 
     def PART(self, msg):
         if msg.nick in self.users:
@@ -196,9 +247,6 @@ class Channel(object):
         if self.client.nick in msg.params[1]:
             self.client.sending.put(Msg('PRIVMSG',
                 [self.name, "G'day, {0}".format(msg.nick)]))
-
-    def NOTICE(self, msg):
-        self.notices.append(msg)
 
     def QUIT(self, msg):
         if msg.nick in self.users:

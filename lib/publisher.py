@@ -4,19 +4,18 @@ class Publisher(object):
 
     def __init__(self):
         self.channels = set()
-        self.subscribers = set()
         self.subscriptions = {}
         self.publications = {}
 
-    def subscribe(self, subscriber, channel, modifier=lambda x: x):
+    def subscribe(self, subscriber, channel, modifier=None):
+        if modifier is None:
+            modifier = lambda x: x
         if channel not in self.channels:
             self.publish(channel)
         self.subscriptions[hash(channel)][hash(subscriber)] = (subscriber, modifier)
-        self.subscribers.add(subscriber)
 
     def unsubscribe(self, subscriber, channel):
         del self.subscriptions[hash(channel)][hash(subscriber)]
-        self.subscribers.remove(subscriber)
 
     def publish(self, channel):
         self.channels.add(channel)
@@ -28,12 +27,9 @@ class Publisher(object):
         self.publications[hash(channel)] = gevent.spawn(publication)
 
     def unpublish(self, channel):
-        self.publications[hash(channel)].kill()
+        channel.put(StopIteration)
         del self.subscriptions[hash(channel)]
         self.channels.remove(channel)
-
-    def join_loop(self):
-        gevent.joinall(self.publications.values())
 
     def kill_loop(self):
         for channel in self.channels:

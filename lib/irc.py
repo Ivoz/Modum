@@ -1,4 +1,6 @@
+import gevent
 from gevent.queue import Queue
+from gevent.event import Event
 from lib.connection import Connection
 from lib.replycodes import numerics
 
@@ -11,6 +13,9 @@ class Irc(object):
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
         self.wait_for_connection = self._conn.connection.wait
+        # Timer to prevent flooding
+        self.timer = Event()
+        self.timer.set()
         # The canonical channels of IRC to subscribe / publish
         # Receives input to send to irc server
         self.sender = Queue()
@@ -18,9 +23,11 @@ class Irc(object):
         self.receiver = Queue()
         self.publisher = publisher
         # Suscribe my output to receive data from connection
-        self.publisher.subscribe(self.receiver, self._conn.receiver, Msg.from_msg)
+        self.publisher.subscribe(self.receiver,
+                self._conn.receiver, Msg.from_msg)
         # Subscribe connection to send data from my input
-        self.publisher.subscribe(self._conn.sender, self.sender, str)
+        self.publisher.subscribe(self._conn.sender,
+                self.sender, self._prevent_flood)
 
     @property
     def connected(self):
@@ -39,14 +46,24 @@ class Irc(object):
         self._conn.disconnect()
         return self.connected
 
+    def _prevent_flood(self, msg):
+        self.timer.wait()
+        self.timer.clear()
+        gevent.spawn_later(1, self.timer.set)
+        return str(msg)
+
 
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, cmd='', params=None, prefix=None, msg=None):
+    def __init__(self, cmd='', params=None, prefix='', msg=None):
+        """Params should be a string or list of strings"""
         self.prefix = prefix
         self.cmd = cmd
-        self.params = params if params is not None else []
+        self.cmdnumber = None
+        params = params if params is not None else []
+        self.params = [params] if isinstance(params, basestring) else params
+        self.params = filter(lambda x: len(x) > 0, self.params)
         self.server = False
         self.nick = prefix
         self.user = None
@@ -62,10 +79,11 @@ class Msg(object):
         if msg.startswith(':'):
             self.prefix, msg = msg[1:].split(' ', 1)
         self.cmd, msg = msg.split(' ', 1)
-        #Needed to properly split 1 argument
         msg = ' ' + msg
+        #Needed to properly split 1 argument
         if self.cmd in numerics:
             # Should be a server reply
+            self.cmdnumber = self.cmd
             self.cmd = numerics[self.cmd]
             self.server = True
             self.host = self.prefix
@@ -77,7 +95,7 @@ class Msg(object):
             except ValueError:
                 self.nick = self.prefix
         trailing = None
-        if ' :' in msg:
+        if msg.find(' :') != -1:
             msg, trailing = msg.split(' :', 1)
         self.params = filter(lambda x: len(x) > 0, msg.split(' '))
         if trailing is not None:
@@ -85,15 +103,14 @@ class Msg(object):
 
     def encode(self):
         msg = ''
-        if self.prefix is not None:
+        if len(self.prefix) > 0:
             msg += ':' + self.prefix + ' '
         msg += self.cmd
         if len(self.params) == 0:
             return msg
-        self.params[-1] = ':' + self.params[-1]
-        for p in self.params:
-            msg += ' '
-            msg += p
+        if len(self.params) > 1:
+            msg += ' ' + ' '.join(self.params[:-1])
+        msg += ' :' + self.params[-1]
         return msg
 
     def __str__(self):

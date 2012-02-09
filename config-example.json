@@ -7,7 +7,7 @@
     }, 
     "servers": {
         "oftc": {
-			"autoretry": true,
+			"autoretry": 5,
             "channels": [
 				"#bananaboat",
                 "#bots"
@@ -20,7 +20,7 @@
             "timeout": 5
         },
         "freenode": {
-			"autoretry": true,
+			"autoretry": 5,
             "channels": [
 				"#bananaboat",
                 "#bots"

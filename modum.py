@@ -1,4 +1,4 @@
-import os
+import os, sys
 import gevent
 from lib.irc import Irc
 from lib.config import Config
@@ -18,7 +18,8 @@ class Modum(object):
         self.stdio.output.put("Bootin' this bitch up...")
         self.publisher = Publisher()
         for name, server in self.conf.servers.items():
-            if not server['enabled']: continue
+            if not server['enabled']:
+                continue
             irc = Irc(server, name, self.publisher)
             client = Client(irc, server, self.stdio)
             self.connections[name] = (irc, client)
@@ -36,8 +37,8 @@ class Modum(object):
             clients.append(client.instance)
 # TODO: Temporary method of seeing all commands on stdout
 # TODO: Work out why the fuck this grinds everything to a half
-            #self.publisher.subscribe(self.stdio.output, irc.receiver, str)
-            #self.publisher.subscribe(self.stdio.output, irc.sender, str)
+            self.publisher.subscribe(self.stdio.output, irc.receiver, str)
+            self.publisher.subscribe(self.stdio.output, irc.sender, str)
         gevent.joinall(clients)
         self.stop()
 
@@ -45,6 +46,8 @@ class Modum(object):
         for irc, _ in self.connections.values():
             irc.disconnect()
         self.stdio.stop()
+        self.publisher.kill_loop()
+        sys.exit()
 
 
 if __name__ == "__main__":
