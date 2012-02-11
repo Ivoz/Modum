@@ -36,11 +36,7 @@ class Irc(object):
     def connect(self):
         if self.connected:
             return True
-        err = self._conn.connect()
-        if self.connected:
-            return True
-        else:
-            return err
+        self._conn.connect()
 
     def disconnect(self):
         self._conn.disconnect()

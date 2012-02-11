@@ -1,33 +1,29 @@
 {
-    "plugin": {
+	"clients": {
+		"Modum" : {
+			"nick": "Modum",
+			"plugins": ["Google"],
+			"servers": {
+				"oftc": ["#bots"]
+			}
+		}
+	},
+    "plugins": {
         "Google": {
-			"enabled": false,
             "url": "http://google.com?q=%s"
         }
     }, 
     "servers": {
         "oftc": {
 			"autoretry": 5,
-            "channels": [
-				"#bananaboat",
-                "#bots"
-            ], 
-			"enabled": true,
             "host": "irc.oftc.net", 
-            "nick": "Modum", 
             "port": 6667, 
             "ssl": false, 
             "timeout": 5
         },
         "freenode": {
 			"autoretry": 5,
-            "channels": [
-				"#bananaboat",
-                "#bots"
-            ], 
-			"enabled": true,
             "host": "irc.freenode.net", 
-            "nick": "Modum", 
             "port": 6667, 
             "ssl": false, 
             "timeout": 5

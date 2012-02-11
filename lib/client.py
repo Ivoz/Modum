@@ -42,7 +42,7 @@ class Client(object):
                     func = getattr(self, msg.cmd, self.unknown)
                     try:
                         func(msg)
-                    except Exception as e:
+                    except Exception:
                         traceback.print_exc()
                 self._finish()
 # TODO: Add cleanup stuff
@@ -52,7 +52,8 @@ class Client(object):
         self.irc.disconnect()
         if type(self.config['autoretry']) == int:
             self.stdio.output.put('{0} reconnecting in {1} \
-                    seconds...'.format(self.irc.name, self.config['autoretry']))
+                    seconds...'.format(self.irc.name,
+                        self.config['autoretry']))
             gevent.sleep(self.config['autoretry'])
             gevent.spawn(self.irc.connect)
         else:
@@ -70,7 +71,7 @@ class Client(object):
         exec code
 
     def quit(self):
-        self.sending.put(Msg('QUIT','Goodbye'))
+        self.sending.put(Msg('QUIT', 'Goodbye'))
 
     def unknown(self, msg):
         """Fallback handler"""
@@ -118,7 +119,8 @@ class Client(object):
     def RPL_NAMREPLY(self, msg):
         channel = msg.params[2]
         chantype = msg.params[1]
-        users = [User(self, channel, msg, name) for name in msg.params[3].split(' ')]
+        users = [User(self, channel, msg, name)
+                for name in msg.params[3].split(' ')]
         self.channels[channel].chantype = chantype
         for user in users:
             self.channels[channel].users[user.nick] = user
@@ -147,7 +149,8 @@ class Client(object):
         new = msg.params[0]
         if self.nick == old:
             self.nick = new
-        for channel in filter(lambda x: old in x.users, self.channels.values()):
+        for channel in filter(lambda x: old in x.users,
+                self.channels.values()):
             channel.NICK(msg)
 
     def NOTICE(self, msg):
@@ -211,6 +214,7 @@ class User(object):
             self.nick = msg.params[0]
             self.user = msg.user
             self.host = msg.host
+
 
 class Channel(object):
 

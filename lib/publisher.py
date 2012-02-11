@@ -1,5 +1,6 @@
 import gevent
 
+
 class Publisher(object):
 
     def __init__(self):
@@ -12,7 +13,8 @@ class Publisher(object):
             modifier = lambda x: x
         if channel not in self.channels:
             self.publish(channel)
-        self.subscriptions[hash(channel)][hash(subscriber)] = (subscriber, modifier)
+        self.subscriptions[hash(channel)][hash(
+            subscriber)] = (subscriber, modifier)
 
     def unsubscribe(self, subscriber, channel):
         del self.subscriptions[hash(channel)][hash(subscriber)]
@@ -20,9 +22,11 @@ class Publisher(object):
     def publish(self, channel):
         self.channels.add(channel)
         self.subscriptions[hash(channel)] = {}
+
         def publication():
             for article in channel:
-                for subscriber, modifier in self.subscriptions[hash(channel)].values():
+                for subscriber, modifier in self.subscriptions[
+                        hash(channel)].values():
                     subscriber.put(modifier(article))
         self.publications[hash(channel)] = gevent.spawn(publication)
 

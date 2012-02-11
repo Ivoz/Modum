@@ -1,10 +1,12 @@
-import os, sys
+import os
+import sys
 import gevent
 from lib.irc import Irc
 from lib.config import Config
 from lib.stdio import StdIO
 from lib.publisher import Publisher
 from lib.client import Client
+
 
 class Modum(object):
     """Modum, the Super Duper IRC bot"""
@@ -30,7 +32,8 @@ class Modum(object):
         for (irc, client) in self.connections.values():
             err = irc.connect()
             if err != True:
-                self.stdio.put("Error connecting to {0}: {1}".format(irc.name, err))
+                self.stdio.put("Error connecting to {0}: {1}"
+                        .format(irc.name, err))
                 name = irc.name
                 del self.connections[name]
                 continue
