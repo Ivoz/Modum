@@ -12,7 +12,7 @@ ERR_TIMEOUT = 'Connection timed out'
 class Connection(object):
     """ Manages a line-by-line TCP connection """
 
-    def __init__(self, host, port, ssl=False, timeout=10, retries=False):
+    def __init__(self, host, port, ssl=False, timeout=5, retries=False):
         self.host = host
         self.port = port
         self.ssl = ssl
@@ -27,6 +27,11 @@ class Connection(object):
         self._obuffer = ''
         self._send_loop = gevent.spawn(self._send)
         self._recv_loop = gevent.spawn(self._receive)
+
+    def __del__(self):
+        self._finalise()
+        self._send_loop.kill()
+        self._recv_loop.kill()
 
     def _create_socket(self):
         s = socket.socket()
@@ -74,6 +79,7 @@ class Connection(object):
                 self.connect()
                 return
         self._finalise()
+
 
     def _finalise(self):
         """Finalise a disconnect"""

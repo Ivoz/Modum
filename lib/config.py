@@ -7,10 +7,15 @@ class Config(object):
         self.config_path = config_path
         self._settings = {}
         self.load(self.config_path)
+        self.clients = None
+        self.servers = None
 
-    def load(self, config_path):
-        self._settings = json.load(open(config_path, 'r'),
+    def load(self, path=None):
+        path = self.config_path if path is None else path
+        self._settings = json.load(open(path, 'r'),
                 encoding="utf8")
+        self.clients = self._settings['clients']
+        self.servers = self._settings['servers']
 
     def reload(self):
         self.load(self.config_path)

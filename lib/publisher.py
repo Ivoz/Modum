@@ -18,6 +18,8 @@ class Publisher(object):
 
     def unsubscribe(self, subscriber, channel):
         del self.subscriptions[hash(channel)][hash(subscriber)]
+        if len(self.subscriptions[hash(channel)]) == 0:
+            self.unpublish(channel)
 
     def publish(self, channel):
         self.channels.add(channel)

@@ -10,9 +10,9 @@ class Irc(object):
 
     def __init__(self, server, name, publisher):
         self.name = name
+        self.server = server
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])
-        self.wait_for_connection = self._conn.connection.wait
         # Timer to prevent flooding
         self.timer = Event()
         self.timer.set()
@@ -29,6 +29,11 @@ class Irc(object):
         self.publisher.subscribe(self._conn.sender,
                 self.sender, self._prevent_flood)
 
+    def __del__(self):
+        self.publisher.unsubscribe(self.receiver, self._conn.receiver)
+        self.publisher.subscribe(self._conn.sender, self.sender)
+        del self._conn
+
     @property
     def connected(self):
         return self._conn.connected
@@ -37,6 +42,10 @@ class Irc(object):
         if self.connected:
             return True
         self._conn.connect()
+        if self.connected:
+            return True
+        else:
+            return self._conn.state
 
     def disconnect(self):
         self._conn.disconnect()

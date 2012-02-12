@@ -26,40 +26,40 @@ class Client(object):
         self.publisher = irc.publisher
         self.publisher.subscribe(self.irc.sender, self.sending)
         self.publisher.subscribe(self.receiving, self.irc.receiver)
-        self.instance = gevent.spawn(self._event_loop)
+        self.instance = gevent.Greenlet(self._event_loop)
         # Backdoor receiver to execute command line input
         self._backinput = Queue()
         self.publisher.subscribe(self._backinput, self.stdio.input)
-        self._backdoor = gevent.spawn(self._back_door)
+        self._backdoor = gevent.Greenlet(self._back_door)
+
+    def start(self):
+        self.irc.connect()
+        if self.irc.connected:
+            self.instance.start()
+            self._backdoor.start()
+        else:
+            self.finish()
 
     def _event_loop(self):
-        while True:
-            if self.irc.wait_for_connection(self.config['timeout']):
-                self.sending.put(Msg('NICK', self.nick))
-                self.sending.put(Msg('USER',
-                    [self.nick, '8', '*', self.nick]))
-                for msg in self.receiving:
-                    func = getattr(self, msg.cmd, self.unknown)
-                    try:
-                        func(msg)
-                    except Exception:
-                        traceback.print_exc()
-                self._finish()
 # TODO: Add cleanup stuff
+        self.sending.put(Msg('NICK', self.nick))
+        self.sending.put(Msg('USER',
+            [self.nick, '8', '*', self.nick]))
+        for msg in self.receiving:
+            func = getattr(self, msg.cmd, self.unknown)
+            try:
+                func(msg)
+            except Exception:
+                traceback.print_exc()
 
-# TODO: Figure out why this doesn't work, possibly move to Irc?
-    def _finish(self):
+    def finish(self):
         self.irc.disconnect()
-        if type(self.config['autoretry']) == int:
-            self.stdio.output.put('{0} reconnecting in {1} \
-                    seconds...'.format(self.irc.name,
-                        self.config['autoretry']))
-            gevent.sleep(self.config['autoretry'])
-            gevent.spawn(self.irc.connect)
-        else:
-            self.stdio.output.put(self.irc.name + ' shutting down...')
-            self._backinput.put(StopIteration)
-            gevent.spawn(self.instance.kill)
+        self.publisher.unsubscribe(self.irc.sender, self.sending)
+        self.publisher.unsubscribe(self.receiving, self.irc.receiver)
+        self.publisher.unsubscribe(self._backinput, self.stdio.input)
+        self.stdio.output.put(self.irc.name + ' shutting down...')
+        self.instance.kill()
+        del self.irc
 
     def _back_door(self):
         for line in self._backinput:

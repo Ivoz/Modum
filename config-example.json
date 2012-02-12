@@ -3,9 +3,8 @@
 		"Modum" : {
 			"nick": "Modum",
 			"plugins": ["Google"],
-			"servers": {
-				"oftc": ["#bots"]
-			}
+			"server": "oftc",
+			"channels": ["#bots"]
 		}
 	},
     "plugins": {
