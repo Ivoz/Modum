@@ -29,11 +29,6 @@ class Irc(object):
         self.publisher.subscribe(self._conn.sender,
                 self.sender, self._prevent_flood)
 
-    def __del__(self):
-        self.publisher.unsubscribe(self.receiver, self._conn.receiver)
-        self.publisher.subscribe(self._conn.sender, self.sender)
-        del self._conn
-
     @property
     def connected(self):
         return self._conn.connected
@@ -50,6 +45,11 @@ class Irc(object):
     def disconnect(self):
         self._conn.disconnect()
         return self.connected
+
+    def kill(self):
+        self.publisher.unsubscribe(self.receiver, self._conn.receiver)
+        self.publisher.subscribe(self._conn.sender, self.sender)
+        self._conn.kill()
 
     def _prevent_flood(self, msg):
         self.timer.wait()

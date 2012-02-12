@@ -28,11 +28,6 @@ class Connection(object):
         self._send_loop = gevent.spawn(self._send)
         self._recv_loop = gevent.spawn(self._receive)
 
-    def __del__(self):
-        self._finalise()
-        self._send_loop.kill()
-        self._recv_loop.kill()
-
     def _create_socket(self):
         s = socket.socket()
         return SSL.wrap_socket(s) if self.ssl else s
@@ -80,6 +75,10 @@ class Connection(object):
                 return
         self._finalise()
 
+    def kill(self):
+        self._finalise()
+        self._send_loop.kill()
+        self._recv_loop.kill()
 
     def _finalise(self):
         """Finalise a disconnect"""

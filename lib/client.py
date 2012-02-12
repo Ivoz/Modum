@@ -59,7 +59,7 @@ class Client(object):
         self.publisher.unsubscribe(self._backinput, self.stdio.input)
         self.stdio.output.put(self.irc.name + ' shutting down...')
         self.instance.kill()
-        del self.irc
+        self.irc.kill()
 
     def _back_door(self):
         for line in self._backinput:
