@@ -33,8 +33,10 @@ class Publisher(object):
         self.publications[hash(channel)] = gevent.spawn(publication)
 
     def unpublish(self, channel):
-        channel.put(StopIteration)
         del self.subscriptions[hash(channel)]
+        channel.put(StopIteration)
+        self.publications[hash(channel)].kill()
+        del self.publications[hash(channel)]
         self.channels.remove(channel)
 
     def kill_loop(self):
