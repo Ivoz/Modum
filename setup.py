@@ -13,7 +13,7 @@ setup(
     url='https://github.com/Ivoz/Modum',
     license='CC by-sa',
     author='Matthew Iversen',
-    author_email='maxc@me.com',
+    author_email='teh.ivo@gmail.com',
     description='Modum is a modular, multi-server, asynchronous IRC bot written in python.',
     long_description=__doc__,
     packages=find_packages(),

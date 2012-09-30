@@ -7,12 +7,12 @@ from lib.client import Client
 
 
 class Modum(object):
-    """Modum, the Super Duper IRC bot"""
+    """Modum, the raurcous IRC bot"""
 
-    def __init__(self, config_path='config.json'):
+    def __init__(self, config_file='config.json'):
         self.root_path = os.path.abspath('')
-        self.config_path = config_path
-        self.conf = Config(os.path.join(self.root_path, config_path))
+        self.config_file = config_file
+        self.conf = Config(os.path.join(self.root_path, config_file))
         self.conf.load()
         self.clients = {}
         self.stdio = StdIO()

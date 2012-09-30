@@ -15,6 +15,7 @@ class Config(object):
         self._settings = json.load(open(path, 'r'),
                 encoding="utf8")
         self.clients = self._settings['clients']
+        self.plugins = self._settings['plugins']
         self.servers = self._settings['servers']
 
     def reload(self):

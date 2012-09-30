@@ -5,8 +5,8 @@ from gevent import socket
 from gevent import ssl as SSL
 from gevent.timeout import Timeout
 
-CRLF = '\r\n'
-ERR_TIMEOUT = 'Connection timed out'
+CRLF = '\r\n'  # Line separator
+ERR_TIMEOUT = 'Connection timed out'  # Timeout error message
 
 
 class Connection(object):
@@ -17,7 +17,7 @@ class Connection(object):
         self.port = port
         self.ssl = ssl
         self.timeout = timeout
-        self.retries = retries
+        self.retries = retries  # Number of times to retry connecting
         self._connection = Event()
         self._state = False
         self.receiver = Queue()
@@ -34,10 +34,12 @@ class Connection(object):
 
     @property
     def connected(self):
+        """Boolean representation of connection state"""
         return self._connection.is_set()
 
     @property
     def state(self):
+        """True if connected, otherwise can contain an error message"""
         return self._state
 
     @state.setter
@@ -49,6 +51,7 @@ class Connection(object):
             self._connection.clear()
 
     def connect(self):
+        """Initiate a connection; will retry if enabled"""
         if not self.connected:
             try:
                 gevent.with_timeout(self.timeout,
@@ -61,6 +64,12 @@ class Connection(object):
                 self.state = True
 
     def disconnect(self, strerror=None):
+        """Disconnect current connection.
+
+        If strerror is None, then disconnect immediately;
+        otherwise try to reconnect.
+        """
+
         if not self.connected and strerror is None:
             return
         self.state = False
@@ -76,6 +85,7 @@ class Connection(object):
         self._finalise()
 
     def kill(self):
+        """Completely terminate this connection"""
         self._finalise()
         self._send_loop.kill()
         self._recv_loop.kill()
@@ -89,6 +99,10 @@ class Connection(object):
         self._obuffer = ''
 
     def _send(self):
+        """The sending loop to send messages over the connection.
+
+        Can have a timeout to report that connection might have dropped.
+        """
         while self._connection.wait():
             line = self.sender.get()
             self._obuffer += line.encode('utf_8',
@@ -103,6 +117,9 @@ class Connection(object):
                     self._obuffer = self._obuffer[sent:]
 
     def _receive(self):
+        """Receiving loop to listen for messages; converts them into
+        separate lines.
+        """
         while self._connection.wait():
             data = self._sock.recv(4096)
             self._ibuffer += data

@@ -8,11 +8,10 @@ from lib.replycodes import numerics
 class Irc(object):
     """ Handles the IRC protocol """
 
-    def __init__(self, server, name, publisher):
-        self.name = name
+    def __init__(self, server, publisher):
         self.server = server
         self._conn = Connection(server['host'], server['port'],
-                    server['ssl'], server['timeout'])
+                    server['ssl'], server['timeout'])  # Internal connection
         # Timer to prevent flooding
         self.timer = Event()
         self.timer.set()
@@ -47,11 +46,13 @@ class Irc(object):
         return self.connected
 
     def kill(self):
+        """Completely terminate the irc connection"""
         self.publisher.unsubscribe(self.receiver, self._conn.receiver)
         self.publisher.subscribe(self._conn.sender, self.sender)
         self._conn.kill()
 
     def _prevent_flood(self, msg):
+        """Used to prevent sending messages extremely quickly"""
         self.timer.wait()
         self.timer.clear()
         gevent.spawn_later(1, self.timer.set)
@@ -78,9 +79,11 @@ class Msg(object):
 
     @classmethod
     def from_msg(cls, message):
+        """Conveinance method"""
         return cls(msg=message)
 
     def decode(self, msg):
+        """Store params of IRC msg string into this object"""
         if msg.startswith(':'):
             self.prefix, msg = msg[1:].split(' ', 1)
         self.cmd, msg = msg.split(' ', 1)
@@ -107,6 +110,7 @@ class Msg(object):
             self.params.append(trailing)
 
     def encode(self):
+        """Encode current Msg object into an IRC message string"""
         msg = ''
         if len(self.prefix) > 0:
             msg += ':' + self.prefix + ' '
