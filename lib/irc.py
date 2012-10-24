@@ -73,8 +73,8 @@ class Msg(object):
         self.cmd = cmd
         self.cmdnumber = None
         params = params if params is not None else []
-        self.params = [params] if isinstance(params, basestring) else params
-        self.params = filter(lambda x: len(x) > 0, self.params)
+        params = [params] if isinstance(params, basestring) else params
+        self.params = [x for x in params if len(x) > 0]
         self.server = False
         self.nick = prefix
         self.user = None
