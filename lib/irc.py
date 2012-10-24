@@ -6,10 +6,12 @@ from lib.replycodes import numerics
 
 
 class Irc(object):
-    """ Handles the IRC protocol """
+    """Handles a client connection to the IRC protocol"""
 
-    def __init__(self, server, publisher):
+    def __init__(self, server, publisher, flood_prevention=1):
         self.server = server
+        self.publisher = publisher
+        self.flood_prevention = flood_prevention
         self._conn = Connection(server['host'], server['port'],
                     server['ssl'], server['timeout'])  # Internal connection
         # Timer to prevent flooding
@@ -20,7 +22,6 @@ class Irc(object):
         self.sender = Queue()
         # Receives output to publish
         self.receiver = Queue()
-        self.publisher = publisher
         # Suscribe my output to receive data from connection
         self.publisher.subscribe(self.receiver,
                 self._conn.receiver, Msg.from_msg)
@@ -48,14 +49,15 @@ class Irc(object):
     def kill(self):
         """Completely terminate the irc connection"""
         self.publisher.unsubscribe(self.receiver, self._conn.receiver)
-        self.publisher.subscribe(self._conn.sender, self.sender)
+        self.publisher.unsubscribe(self._conn.sender, self.sender)
         self._conn.kill()
 
     def _prevent_flood(self, msg):
         """Used to prevent sending messages extremely quickly"""
-        self.timer.wait()
-        self.timer.clear()
-        gevent.spawn_later(1, self.timer.set)
+        if self.flood_prevention > 0:
+            self.timer.wait()
+            self.timer.clear()
+            gevent.spawn_later(self.flood_prevention, self.timer.set)
         return str(msg)
 
 

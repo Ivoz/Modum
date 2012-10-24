@@ -17,6 +17,5 @@ setup(
     description='Modum is a modular, multi-server, asynchronous IRC bot written in python.',
     long_description=__doc__,
     packages=find_packages(),
-    data_files=[('.', ['config-example.json'])],
     zip_safe=False
 )

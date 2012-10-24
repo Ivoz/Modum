@@ -45,7 +45,7 @@ class Connection(object):
     @state.setter
     def state(self, value):
         self._state = value
-        if value == True:
+        if value is True:
             self._connection.set()
         else:
             self._connection.clear()
@@ -56,8 +56,8 @@ class Connection(object):
             try:
                 gevent.with_timeout(self.timeout,
                         self._sock.connect, (self.host, self.port))
-            except socket.error as (_, strerror):
-                return strerror
+            except socket.error as e:
+                return e.strerror
             except Timeout:
                 self.disconnect(ERR_TIMEOUT)
             else:
@@ -73,7 +73,6 @@ class Connection(object):
         if not self.connected and strerror is None:
             return
         self.state = False
-        print strerror
         if strerror is not None:
             # Not been told to disconnect
             self.state = strerror
@@ -86,7 +85,7 @@ class Connection(object):
 
     def kill(self):
         """Completely terminate this connection"""
-        self._finalise()
+        self.disconnect()
         self._send_loop.kill()
         self._recv_loop.kill()
 
