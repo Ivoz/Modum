@@ -1,0 +1,35 @@
+{
+  "clients": {
+    "ModumFree": {
+      "channels": [
+        "#bots"
+      ], 
+      "nick": "Modum", 
+      "plugins": [
+        "Search"
+      ], 
+      "server": "freenode"
+    }
+  }, 
+  "plugins": {
+    "Search": {
+      "url": "https://ajax.googleapis.com/ajax/services/search/web"
+    }
+  }, 
+  "servers": {
+    "freenode": {
+      "autoretry": 5, 
+      "host": "irc.freenode.net", 
+      "port": 6667, 
+      "ssl": false, 
+      "timeout": 5
+    }, 
+    "oftc": {
+      "autoretry": 5, 
+      "host": "irc.oftc.net", 
+      "port": 6667, 
+      "ssl": false, 
+      "timeout": 5
+    }
+  }
+}
