@@ -3,6 +3,9 @@ from gevent.queue import Queue
 from gevent.event import Event
 from lib.connection import Connection
 from lib.replycodes import numerics
+import sys
+if sys.version > '3':
+    basestring = str
 
 
 class Irc(object):
