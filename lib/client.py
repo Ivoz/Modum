@@ -74,7 +74,7 @@ class Client(object):
     def PRIVMSG(self, msg):
         if self.nick == msg.params[0]:
             if 'quit' in msg.params[1]:
-                print 'quitting...'
+                print('quitting...')
                 self.kill()
 
 

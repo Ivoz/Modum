@@ -4,4 +4,4 @@ from lib.bot import Modum
 if __name__ == "__main__":
     modum = Modum('data/config.json')
     modum.run()
-    print 'goodbye.'
+    print('goodbye.')
