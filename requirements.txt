@@ -1,0 +1,4 @@
+Cython==0.17.1
+-e git://github.com/SiteSupport/gevent.git@15418fc8ff4460069cf42b4b0341969c54455ddd#egg=gevent-dev
+greenlet==0.4.0
+wsgiref==0.1.2
