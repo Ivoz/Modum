@@ -5,8 +5,9 @@
         "#bots"
       ], 
       "nick": "Modum", 
+      "prefixes": ["@", "!", "~"], 
       "plugins": [
-        "Search"
+        "Ascii"
       ], 
       "server": "freenode"
     }
