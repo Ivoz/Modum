@@ -24,8 +24,9 @@ class Plugin(object):
     def __init__(self, client):
         self.client = client
         self._send = self.client.sending.put
-        self.data_dir = os.path.join('data', self.__class__.__name__)
+        self.data_dir = os.path.join('data', self.__class__.__name__.lower())
         self.data_dir += os.path.sep
+        self._load_commands()
 
     def _load_commands(self):
         members = [getattr(self, m) for m in dir(self)]
