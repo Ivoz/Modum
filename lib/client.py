@@ -1,4 +1,4 @@
-from lib.irc import Irc, Msg
+from lib.irc import Irc
 from lib.publisher import Publisher
 from lib.stdio import StdIO
 import gevent
@@ -9,17 +9,25 @@ class Client(object):
 
     def __init__(self, name, config):
         self.name = name
-        self.config = config
+        conf = config.clients[name]
+        self.config = conf
         self.publisher = Publisher()
-        # Initialize irc connection
-        server = config.clients[name]['server']
-        self.server = config.servers[server]
-        self.irc = Irc(config.servers[server], self.publisher)
+        # Initialize Irc connection object
+        self.server = config.servers[conf['server']]
+        self.irc = Irc(self.server, self.publisher)
         # Configuration
         self.nick = config.clients[name]['nick']
         self.stdio = StdIO()
         self.sending = Queue()
         self.receiving = Queue()
+        self.plugins = {}
+        for plugin in ['Base'] + conf['plugins']:
+            if self._load_module(plugin):
+                if plugin in config.plugins:
+                    self.plugins[plugin].setup(config.plugins[plugin])
+                else:
+                    self.plugins[plugin].setup()
+                self.plugins[plugin]._load_commands()
         self.instance = None
 
     def start(self):
@@ -29,26 +37,42 @@ class Client(object):
         self.publisher.subscribe(self.receiving, self.irc.receiver)
 # TODO: Remove, debugging
         self.publisher.subscribe(self.stdio.output,
-            self.irc.receiver, str)
+                self.irc.receiver, str)
         self.publisher.subscribe(self.stdio.output,
-            self.irc.sender, str)
+                self.irc.sender, str)
+        from lib.irc import Msg
+        self.publisher.subscribe(self.sending,
+                self.stdio.input, Msg.from_msg)
         self.irc.connect()
         self.instance = gevent.spawn(self._event_loop)
         return self.instance
 
     def _event_loop(self):
 # TODO: Add cleanup stuff
-        self.sending.put(Msg('NICK', self.nick))
-        self.sending.put(Msg('USER',
-            [self.nick, '8', '*', self.nick]))
+        gevent.spawn(self.plugins['Base'].on_connect)
         for msg in self.receiving:
             if msg is FinishLoop:
                 break
-            func = getattr(self, msg.cmd, self.unknown)
-            try:
-                func(msg)
-            except:
-                pass
+            for plugin in self.plugins.values():
+                cmd = 'on_' + msg.cmd.lower()
+                if hasattr(plugin, cmd):
+                    func = getattr(plugin, cmd)
+                    gevent.spawn(func, msg)
+                if msg.ctcp is not None:
+                    cmd = 'on_ctcp_' + msg.ctcp[0].lower()
+                    if hasattr(plugin, cmd):
+                        func = getattr(plugin, cmd)
+                        gevent.spawn(func, msg)
+
+    def _load_module(self, plugin):
+        try:
+            p_name = 'plugin.' + plugin.lower()
+            p = __import__(p_name, fromlist=[plugin], level=-1)
+            self.plugins[plugin] = getattr(p, plugin)(self)
+            return True
+        except ImportError as e:
+            print str(e)
+            return False
 
     def kill(self):
         self.irc.kill()
@@ -61,21 +85,6 @@ class Client(object):
             self.irc.sender)
         self.stdio.stop()
         self.receiving.put(FinishLoop)
-
-    def unknown(self, msg):
-        """Fallback handler"""
-        if msg.cmd.isdigit():
-            self.stdio.output.put("Unknown call: " + msg.cmd)
-
-    def PING(self, msg):
-        msg.cmd = 'PONG'
-        self.sending.put(msg)
-
-    def PRIVMSG(self, msg):
-        if self.nick == msg.params[0]:
-            if 'quit' in msg.params[1]:
-                print('quitting...')
-                self.kill()
 
 
 class FinishLoop(StopIteration):
