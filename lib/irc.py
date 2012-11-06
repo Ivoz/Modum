@@ -1,11 +1,35 @@
 import gevent
+import re
+import sys
 from gevent.queue import Queue
 from gevent.event import Event
 from lib.connection import Connection
 from lib.replycodes import numerics
-import sys
 if sys.version > '3':
     basestring = str
+
+
+RE_CTCP = '\001([^\001 ]+)(?: ((?<= )[^\001]*))?\001'
+M_QUOTE = '\020'
+# Order important
+CTCP_QUOTES = [
+        (M_QUOTE, M_QUOTE * 2),
+        ('\000', M_QUOTE + '0'),
+        ('\n', M_QUOTE + 'n'),
+        ('\r', M_QUOTE + 'r'),
+        ]
+
+
+def ctcp_quote(msg):
+    for esc, quote in CTCP_QUOTES:
+        msg = msg.replace(esc, quote)
+    return msg
+
+
+def ctcp_dequote(msg):
+    for esc, quote in CTCP_QUOTES[::-1]:
+        msg = msg.replace(quote, esc)
+    return msg
 
 
 class Irc(object):
@@ -57,7 +81,7 @@ class Irc(object):
 
     def _prevent_flood(self, msg):
         """Used to prevent sending messages extremely quickly"""
-        if self.flood_prevention > 0:
+        if self.flood_prevention > 0 and msg.cmd != 'PONG':
             self.timer.wait()
             self.timer.clear()
             gevent.spawn_later(self.flood_prevention, self.timer.set)
@@ -67,14 +91,15 @@ class Irc(object):
 class Msg(object):
     """ Represents an IRC message to be sent or decoded """
 
-    def __init__(self, cmd='', params=None, prefix='', msg=None):
+    def __init__(self, cmd='', params=None, prefix='', ctcp=None, msg=None):
         """Params should be a string or list of strings"""
-        self.prefix = prefix
         self.cmd = cmd
         self.cmdnumber = None
         params = params if params is not None else []
         params = [params] if isinstance(params, basestring) else params
         self.params = [x for x in params if len(x) > 0]
+        self.prefix = prefix
+        self.ctcp = ctcp
         self.server = False
         self.nick = prefix
         self.user = None
@@ -112,7 +137,13 @@ class Msg(object):
             msg, trailing = msg.split(' :', 1)
         self.params = filter(lambda x: len(x) > 0, msg.split(' '))
         if trailing is not None:
-            self.params.append(trailing)
+            trailing = ctcp_dequote(trailing)
+            m = re.search(RE_CTCP, trailing)
+            if m is not None:
+                self.ctcp = m.groups()
+                trailing = re.sub(RE_CTCP, '', trailing)
+            if len(trailing) > 0:
+                self.params.append(trailing)
 
     def encode(self):
         """Encode current Msg object into an IRC message string"""
@@ -120,11 +151,16 @@ class Msg(object):
         if len(self.prefix) > 0:
             msg += ':' + self.prefix + ' '
         msg += self.cmd
-        if len(self.params) == 0:
+        params = self.params[:]
+        if self.ctcp is not None:
+            ctcp = [s for s in self.ctcp if s is not None]
+            ctcp = '\001' + ' '.join(ctcp) + '\001'
+            params.append(ctcp)
+        if len(params) == 0:
             return msg
-        if len(self.params) > 1:
-            msg += ' ' + ' '.join(self.params[:-1])
-        msg += ' :' + self.params[-1]
+        if len(params) > 1:
+            msg += ' ' + ' '.join(params[:-1])
+        msg += ' :' + ctcp_quote(params[-1])
         return msg
 
     def __str__(self):
