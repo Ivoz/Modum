@@ -2,7 +2,7 @@
 Modum
 =====
 
-Modum is a modular, multi-server, asynchronous IRC bot written in python.
+Modum is a modular, asynchronous IRC bot written in python.
 
 Installation
 ------------
@@ -11,7 +11,7 @@ It depends on `gevent <http://gevent.org>`_, which can be  downloaded `here <htt
 
 gevent below v1.0 depends on libevent, and above depends on libev.
 
-I recommend you install gevent using `pip <http://www.pip-installer.org/en/latest/installing.html>`_ (``pip install gevent``).
+Requirements can be installed by ``pip install -r requirements.txt``.
 
 Usage
 -----
@@ -21,10 +21,20 @@ which you should edit with appropriate settings before you start it.
 
 Modum can then be started simply with ``./modum`` or ``python modum``.
 
+You can find other options through ``./modum --help``.
+
 Extension
 ---------
 
 You can add plugins in the obvious ``plugins`` directory.
+
+Plugins should extend from the ``Plugin`` object, which provides many
+convenience methods.
+
+To allow for initialization, define this method:
+``def setup(self, settings, botSettings):``
+settings comes from the ``plugins`` section of the configuration file,
+and botSettings comes from the client section of the configuration file.
 
 Credits
 -------
