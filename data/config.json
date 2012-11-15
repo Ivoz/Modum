@@ -6,9 +6,13 @@
       ], 
       "nick": "Modum", 
       "prefixes": ["@", "!", "~"], 
-      "plugins": [
-        "Ascii"
-      ], 
+      "plugins": {
+        "Ascii": null,
+        "Owner": [
+          ["Ivo", "pass", "hello"],
+          ["Ivo", "host", ["~ivo", "unaffiliated/ivoz"]]
+        ]
+      }, 
       "server": "freenode"
     }
   }, 
