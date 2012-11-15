@@ -1,7 +1,29 @@
 #!/usr/bin/env python
-from lib.bot import Modum
+import argparse
+from daemonize import Daemonize
+from lib.bot import Modum, __version__
+
+desc = 'Modum, a gevent-based pluginised python IRC bot!'
+pid = '/tmp/modum.pid'
 
 if __name__ == "__main__":
-    modum = Modum('data/config.json')
-    modum.run()
-    print('goodbye.')
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('-d', '--daemon',
+            action='store_true',
+            help='Run as a daemon')
+    parser.add_argument('-c', '--config',
+            default='data/config.json',
+            help='Path to config file')
+    parser.add_argument('--data',
+            default='data/',
+            help='Path to data directory')
+    parser.add_argument('-v', '--version',
+            action='version', version=__version__)
+    args = parser.parse_args()
+    modum = Modum(args, __file__).run
+    if args.daemon:
+        daemon = Daemonize(app='Modum IRC Bot', pid=pid,
+                action=modum)
+        daemon.start()
+    else:
+        modum()
