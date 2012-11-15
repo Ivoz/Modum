@@ -6,28 +6,25 @@ from gevent.queue import Queue
 
 
 class Client(object):
+    """An IRC Client, designed to be pluggable"""
 
     def __init__(self, name, config):
         self.name = name
-        conf = config.clients[name]
-        self.config = conf
+        self.config = config  # Overall config
+        self.options = config.clients[name]  # Client options
         self.publisher = Publisher()
         # Initialize Irc connection object
-        self.server = config.servers[conf['server']]
+        self.server = config.servers[self.options['server']]
         self.irc = Irc(self.server, self.publisher)
         # Configuration
-        self.nick = config.clients[name]['nick']
+        self.nick = self.options['nick']
         self.stdio = StdIO()
         self.sending = Queue()
         self.receiving = Queue()
+        # Plugins
         self.plugins = {}
-        for plugin in ['Base'] + conf['plugins']:
-            if self._load_module(plugin):
-                if plugin in config.plugins:
-                    self.plugins[plugin].setup(config.plugins[plugin])
-                else:
-                    self.plugins[plugin].setup()
-                self.plugins[plugin]._load_commands()
+        plugins = ['Base'] + self.options['plugins'].keys()
+        [self.load_plugin(p) for p in plugins]
         self.instance = None
 
     def start(self):
@@ -47,8 +44,33 @@ class Client(object):
         self.instance = gevent.spawn(self._event_loop)
         return self.instance
 
+    def kill(self):
+        """Completely close connection to server"""
+        while not self.sending.empty():
+            gevent.sleep(0.5)
+        self.irc.kill()
+# TODO: Remove, debugging
+        self.publisher.unsubscribe(self.irc.sender, self.sending)
+        self.publisher.unsubscribe(self.receiving, self.irc.receiver)
+        self.publisher.unsubscribe(self.stdio.output,
+            self.irc.receiver)
+        self.publisher.unsubscribe(self.stdio.output,
+            self.irc.sender)
+        self.stdio.stop()
+        self.receiving.put(FinishLoop)
+
+    def load_plugin(self, plugin):
+        if self._load_module(plugin):
+            if hasattr(self.plugins[plugin], 'setup'):
+                settings = None
+                if plugin in self.config.plugins:
+                    settings = self.config.plugins[plugin]
+                botSettings = None
+                if plugin in self.options['plugins']:
+                    botSettings = self.options['plugins'][plugin]
+                self.plugins[plugin].setup(settings, botSettings)
+
     def _event_loop(self):
-# TODO: Add cleanup stuff
         gevent.spawn(self.plugins['Base'].on_connect)
         for msg in self.receiving:
             if msg is FinishLoop:
@@ -73,18 +95,6 @@ class Client(object):
         except ImportError as e:
             print str(e)
             return False
-
-    def kill(self):
-        self.irc.kill()
-# TODO: Remove, debugging
-        self.publisher.unsubscribe(self.irc.sender, self.sending)
-        self.publisher.unsubscribe(self.receiving, self.irc.receiver)
-        self.publisher.unsubscribe(self.stdio.output,
-            self.irc.receiver)
-        self.publisher.unsubscribe(self.stdio.output,
-            self.irc.sender)
-        self.stdio.stop()
-        self.receiving.put(FinishLoop)
 
 
 class FinishLoop(StopIteration):
