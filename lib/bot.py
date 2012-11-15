@@ -3,16 +3,21 @@ from lib.config import Config
 from lib.client import Client
 
 
+__version__ = '0.1-dev'
+
+
 class Modum(object):
     """Modum, the raurcous IRC bot"""
 
-    def __init__(self, config_file='data/config.json'):
-        config_path = os.path.join(os.path.abspath(''), config_file)
-        self.conf = Config(config_path)
+    def __init__(self, args, filepath):
+        file_dir = os.path.dirname(os.path.realpath(filepath))
+        config_path = os.path.join(file_dir, args.config)
+        data_path = os.path.join(file_dir, args.data)
+        self.conf = Config(config_path, data_path)
+        self.daemonized = args.daemon
         self.clients = {}
         for name, client in self.conf.clients.items():
             self.clients[name] = Client(name, self.conf)
-# TODO: Temporary method of seeing all commands on stdout
 
     def run(self):
         """Main method to start modum up"""
