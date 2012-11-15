@@ -11,17 +11,20 @@ It depends on `gevent <http://gevent.org>`_, which can be  downloaded `here <htt
 
 gevent below v1.0 depends on libevent, and above depends on libev.
 
-Requirements can be installed by ``pip install -r requirements.txt``.
+Requirements can be installed with ``pip install -r requirements.txt``
+
+At the moment I am using a v1.0 version of gevent, if you wish you can install it
+beforehand from pypi using ``pip install gevent``
 
 Usage
 -----
 
-Modum is configured with ``config.json``, in the ``data`` directory
+Modum is configured with ``config.json`` in the ``data`` directory,
 which you should edit with appropriate settings before you start it.
 
-Modum can then be started simply with ``./modum`` or ``python modum``.
+Modum can then be started simply with ``./modum`` or ``python modum``
 
-You can find other options through ``./modum --help``.
+You can find other options through ``./modum --help``
 
 Extension
 ---------
@@ -31,10 +34,16 @@ You can add plugins in the obvious ``plugins`` directory.
 Plugins should extend from the ``Plugin`` object, which provides many
 convenience methods.
 
-To allow for initialization, define this method:
+See ``plugins/ascii.py`` for an example plugin.
+
+To allow for easy initialization, define this method:
+
 ``def setup(self, settings, botSettings):``
-settings comes from the ``plugins`` section of the configuration file,
-and botSettings comes from the client section of the configuration file.
+
+Please don't define ``__init__``, unless you call it on the parent as well.
+
+``settings`` comes from the ``plugins`` section of the configuration file,
+and ``botSettings`` comes from the client section of the configuration file.
 
 Credits
 -------
