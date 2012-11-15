@@ -1,8 +1,10 @@
 from plugin import *
 from lib.irc import Msg
+from plugin.owner import owner
 
 
 class Base(Plugin):
+    """Implements basic functionality an IRC bot needs."""
 
     def on_connect(self):
         nick = self.client.nick
@@ -18,7 +20,7 @@ class Base(Plugin):
             self.client.nick = msg.params[0]
 
     def on_rpl_welcome(self, msg):
-        channels = self.client.config['channels']
+        channels = self.client.options['channels']
         self.join(channels)
 
     def on_ctcp_version(self, msg):
@@ -35,7 +37,19 @@ class Base(Plugin):
         [names.update(cmds) for cmds in cmd_list]
         if msg.params[-1] in names:
             doc = names[msg.params[-1]].__doc__
-            self.privmsg(msg.nick, msg.params[-1] + ': ' + doc)
+            if doc is None:
+                doc = 'No help available'
+            self.privmsg(msg.nick, msg.params[-1] + ': ' + doc.rstrip())
         else:
             cmds = sorted(names.keys())
             self.privmsg(msg.nick, 'available commands: ' + ', '.join(cmds))
+
+    @owner
+    @command
+    def die(self, msg):
+        """
+        I will then expire.
+        """
+        self.privmsg(msg.nick, "Goodbye, cruel world...")
+        self.quit("Cya, folks!")
+        self.client.kill()
