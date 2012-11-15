@@ -4,7 +4,7 @@ import os
 
 class Ascii(Plugin):
 
-    def setup(self):
+    def setup(self, settings, botSettings):
         self.sailors = os.listdir(self.data_dir)
 
     @command
