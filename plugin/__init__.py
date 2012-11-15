@@ -1,6 +1,6 @@
 import os
 import sys
-from functools import wraps
+from functools import partial, wraps
 from lib.irc import Msg
 if sys.version > '3':
     basestring = str
@@ -8,24 +8,34 @@ if sys.version > '3':
 __all__ = ['command', 'Plugin']
 
 
-def command(func, name=None):
+def command(func=None, name=None):
+    """Make a plugin method a command actionable by a user"""
+    if func is None:
+        return partial(command, name=name)
+
     if name is None:
         name = func.__name__
 
     @wraps(func)
-    def wrapper(*args, **kwds):
-        return func(*args, **kwds)
+    def wrapper(self, msg):
+        return func(self, msg)
     wrapper._command = name
     return wrapper
 
 
 class Plugin(object):
+    """
+    Underlying class from which plugins can extend.
+    Implements a number of helpful irc-related wrapper
+    methods, implements command functionality.
+    """
 
     def __init__(self, client):
         self.client = client
         self._send = self.client.sending.put
-        self.data_dir = os.path.join('data', self.__class__.__name__.lower())
-        self.data_dir += os.path.sep
+        data = self.client.config.data_dir
+        name = self.__class__.__name__.lower()
+        self.data_dir = os.path.join(data, name) + os.path.sep
         self._load_commands()
 
     def _load_commands(self):
@@ -35,9 +45,6 @@ class Plugin(object):
             if hasattr(member, '_command'):
                 commands[member._command] = member
         self.commands = commands
-
-    def setup(self):
-        pass
 
     def action(self, target, msg):
         self._send(Msg('PRIVMSG', target, ctcp=['ACTION', msg]))
@@ -83,7 +90,7 @@ class Plugin(object):
 
     def on_privmsg(self, msg):
         for name, command in self.commands.iteritems():
-            if msg.params[-1][0] in self.client.config['prefixes']:
+            if msg.params[-1][0] in self.client.options['prefixes']:
                 if msg.params[-1][1:].startswith(name):
                     m = Msg.from_msg(str(msg))
                     m.params[-1] = m.params[-1][len(name) + 1:].lstrip(' ')
