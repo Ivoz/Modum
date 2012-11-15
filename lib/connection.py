@@ -10,7 +10,7 @@ ERR_TIMEOUT = 'Connection timed out'  # Timeout error message
 
 
 class Connection(object):
-    """ Manages a line-by-line TCP connection """
+    """Manages a line-by-line TCP connection"""
 
     def __init__(self, host, port, ssl=False, timeout=5, retries=False):
         self.host = host
