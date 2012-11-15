@@ -2,6 +2,7 @@ Major:
 - Organise Channels and Users so that they always represent the same instance
 - Create logging functionality for hooking up stdio, etc
 - Fix daemonisation
+- Implement runtime plugin reloading
 
 Possibles:
 - Refactor receiving targeted commands to their targets
