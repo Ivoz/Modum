@@ -2,9 +2,13 @@ import json
 
 
 class Config(object):
+    """Load a json config into dictionaries, basically"""
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, data_dir=None):
         self.config_path = config_path
+        if data_dir is None:
+            data_dir = 'data/'
+        self.data_dir = data_dir
         self.clients = None
         self.plugins = None
         self.servers = None
