@@ -1,4 +1,5 @@
-__all__ = ['client',
+__all__ = ['bot',
+           'client',
            'config',
            'connection',
            'irc',
