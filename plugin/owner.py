@@ -28,16 +28,12 @@ class Owner(Plugin):
     def _auth_pass(self, msg, user, creds):
         nick = msg.nick
         password = msg.params[-1]
-        print nick, user
-        print password, creds
         if nick == user and password == creds:
             return True
         else:
             return False
 
     def _auth_host(self, msg, user, creds):
-        print creds[0], msg.user
-        print creds[1], msg.host
         if creds[0] != '*' and creds[0] != msg.user:
             return False
         if creds[1] != '*' and creds[1] != msg.host:
