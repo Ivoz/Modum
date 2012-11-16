@@ -1,0 +1,3 @@
+include LICENSE README.rst modum
+include data/config.json
+include data/*/*
