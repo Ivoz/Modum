@@ -99,21 +99,3 @@ class Client(object):
 
 class FinishLoop(StopIteration):
     pass
-
-
-class Channel(object):
-
-    def __init__(self, name):
-        self.name = name
-
-
-class User(object):
-
-    def __init__(self, nick, user='', host=''):
-        self.nick = nick
-        self.user = user
-        self.host = host
-
-    @classmethod
-    def from_msg(cls, message):
-        return cls(message.nick, message.user, message.host)
