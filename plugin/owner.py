@@ -13,6 +13,7 @@ def owner(func):
             return
         if self.client.plugins['Owner'].validate(msg):
             return func(self, msg)
+    wrapper._owner = True
     return wrapper
 
 
@@ -41,6 +42,8 @@ class Owner(Plugin):
         return True
 
     def on_join(self, msg):
+        if self.validate(msg):
+            return
         for (owner, method, creds) in self.owners:
             if method != 'host':
                 continue
@@ -75,6 +78,7 @@ class Owner(Plugin):
         else:
             self.privmsg(msg.nick, 'Failed to authenticate')
 
+    @owner
     @command(name='deauth')
     def deauthenticate(self, msg):
         """
@@ -82,13 +86,12 @@ class Owner(Plugin):
         With no arguments, deauths yourself.
         Usage: deauth [<nick>]
         """
-        if msg.nick in self.authed:
-            if msg.params[-1].strip() == '':
-                del self.authed[msg.nick]
-                self.privmsg(msg.nick, 'You are now deauthenticated')
-            if msg.params[-1] in self.authed:
-                del self.authed[msg.params[-1]]
-                self.privmsg(msg.nick, msg.nick + ' deauthenticated')
+        if msg.params[-1].strip() == '':
+            del self.authed[msg.nick]
+            self.privmsg(msg.nick, 'You are now deauthenticated')
+        if msg.params[-1] in self.authed:
+            del self.authed[msg.params[-1]]
+            self.privmsg(msg.nick, msg.nick + ' deauthenticated')
 
     @owner
     @command
