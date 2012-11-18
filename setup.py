@@ -17,6 +17,6 @@ setup(
     long_description=readme,
     keywords='IRC bot gevent',
     packages=find_packages(),
-    install_requires=['gevent'],
+    install_requires=['gevent', 'daemonize'],
     zip_safe=False
 )
