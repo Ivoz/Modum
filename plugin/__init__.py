@@ -46,44 +46,46 @@ class Plugin(object):
                 commands[member._command] = member
         self.commands = commands
 
-    def action(self, target, msg):
-        self._send(Msg('PRIVMSG', target, ctcp=['ACTION', msg]))
+    def action(self, target, text):
+        self._send(Msg('PRIVMSG', target, ctcp=['ACTION', text]))
 
-    def ctcp_reply(self, cmd, target, msg):
-        self._send(Msg('NOTICE', target, ctcp=[cmd, msg]))
+    def ctcp_reply(self, cmd, target, text):
+        self._send(Msg('NOTICE', target, ctcp=[cmd, text]))
 
     def join(self, channel):
         if isinstance(channel, basestring):
             channel = [channel]
         self._send(Msg('JOIN', ','.join(channel)))
 
-    def mode(self, target, flags, args=None):
-        arg = [target, flags]
-        if args is not None:
-            arg.append(args)
-        self._send(Msg('MODE', arg))
+    def mode(self, flags):
+        self._send(Msg('MODE', [self.client.nick, flags]))
 
-    def notice(self, target, msg):
-        for line in msg.split('\n'):
+    def notice(self, target, text):
+        for line in text.split('\n'):
             self._send(Msg('NOTICE', [target, line]))
 
     def nick(self, nick):
         self._send(Msg('NICK', nick))
 
-    def part(self, channel, msg=None):
+    def part(self, channel, text=None):
         if isinstance(channel, basestring):
             channel = [channel]
-        self._send(Msg('PART', [','.join(channel), msg]))
+        self._send(Msg('PART', [','.join(channel), text]))
 
-    def privmsg(self, target, msg):
-        for line in msg.split('\n'):
+    def privmsg(self, target, text):
+        for line in text.split('\n'):
             self._send(Msg('PRIVMSG', [target, line]))
 
-    def quit(self, msg):
-        self._send(Msg('QUIT', msg))
+    def quit(self, text):
+        self._send(Msg('QUIT', text))
 
-    def topic(self, channel, topic):
-        self._send(Msg('TOPIC', [channel, topic]))
+    def reply(self, msg, text):
+        """Reply in correct channel or private query"""
+        if msg.params[0] == self.client.nick:
+            target = msg.nick
+        else:
+            target = msg.params[0]
+        self.privmsg(target, text)
 
     def whois(self, nick):
         self._send(Msg('WHOIS', nick))
