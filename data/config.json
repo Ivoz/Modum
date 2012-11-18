@@ -2,14 +2,14 @@
   "clients": {
     "ModumFree": {
       "channels": [
-        "#bots"
+        "#bots",
+        "#modum"
       ], 
       "nick": "Modum", 
       "prefixes": ["@", "!", "~"], 
       "plugins": {
         "Ascii": null,
         "Owner": [
-          ["Ivo", "pass", "hello"],
           ["Ivo", "host", ["~ivo", "unaffiliated/ivoz"]]
         ]
       }, 
@@ -25,8 +25,8 @@
     "freenode": {
       "autoretry": 5, 
       "host": "irc.freenode.net", 
-      "port": 6667, 
-      "ssl": false, 
+      "port": 6697, 
+      "ssl": true, 
       "timeout": 5
     }, 
     "oftc": {
